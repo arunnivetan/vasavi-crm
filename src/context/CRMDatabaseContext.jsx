@@ -511,12 +511,12 @@ export const CRMDatabaseProvider = ({ children }) => {
 
   const renameStage = async (oldName, newName) => {
     try {
-      const updatedStages = stages.map(s => 
+      const updatedStages = (stages || []).map(s => 
         s.stageName === oldName ? { ...s, stageName: newName } : s
       );
       await databaseService.saveAllStages(updatedStages);
 
-      const updatedCustomers = customers.map(c => 
+      const updatedCustomers = (customers || []).map(c => 
         c.stage === oldName ? { ...c, stage: newName } : c
       );
       
@@ -536,12 +536,12 @@ export const CRMDatabaseProvider = ({ children }) => {
 
   const deleteStage = async (stageName) => {
     try {
-      const remainingStages = stages.filter(s => s.stageName !== stageName);
-      const ordered = remainingStages.map((s, idx) => ({ ...s, stageOrder: idx + 1 }));
+      const remainingStages = (stages || []).filter(s => s.stageName !== stageName);
+      const ordered = (remainingStages || []).map((s, idx) => ({ ...s, stageOrder: idx + 1 }));
       await databaseService.deleteStage(stageName);
 
       const fallbackStage = ordered[0]?.stageName || 'New Lead';
-      const updatedCustomers = customers.map(c => 
+      const updatedCustomers = (customers || []).map(c => 
         c.stage === stageName ? { ...c, stage: fallbackStage } : c
       );
       
@@ -559,7 +559,7 @@ export const CRMDatabaseProvider = ({ children }) => {
 
   const reorderStages = async (reorderedStages) => {
     try {
-      const updated = reorderedStages.map((s, idx) => ({ ...s, stageOrder: idx + 1 }));
+      const updated = (reorderedStages || []).map((s, idx) => ({ ...s, stageOrder: idx + 1 }));
       await databaseService.saveAllStages(updated);
       await refreshDatabase();
     } catch (err) {
@@ -633,8 +633,8 @@ export const CRMDatabaseProvider = ({ children }) => {
 
   return (
     <CRMDatabaseContext.Provider value={{
-      customers: customers.filter(c => !c.isDeleted), 
-      allCustomersRaw: customers, 
+      customers: (customers || []).filter(c => !c.isDeleted), 
+      allCustomersRaw: customers || [], 
       activities,
       notes,
       payments,

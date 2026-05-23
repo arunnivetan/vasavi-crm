@@ -30,7 +30,8 @@ export default function Dashboard({ onViewCustomer }) {
     addCustomerNote,
     createReminder,
     logPdfGeneration,
-    refreshDatabase
+    refreshDatabase,
+    isLoading
   } = useCRMDatabase();
 
   // --- FILTERS STATE ---
@@ -82,6 +83,36 @@ export default function Dashboard({ onViewCustomer }) {
   // Notes state inside Create Workspace
   const [createWorkspaceNote, setCreateWorkspaceNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '60vh',
+        fontFamily: 'var(--font-display)',
+        color: 'var(--text-white)',
+        gap: '12px'
+      }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          border: '3px solid rgba(249, 115, 22, 0.1)',
+          borderTopColor: 'var(--accent)',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}} />
+        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Loading CRM Database...</span>
+      </div>
+    );
+  }
 
   // --- INTERACTIVE MATH CALCULATOR ---
   const subtotal = newCustItems.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
@@ -162,12 +193,18 @@ export default function Dashboard({ onViewCustomer }) {
   const todayStr = new Date().toISOString().split('T')[0];
 
   // --- DATA FILTERING ---
-  const filteredCustomers = customers.filter(c => {
+  const filteredCustomers = (customers || []).filter(c => {
+    if (!c) return false;
+    const name = c.customerName || '';
+    const phone = c.phone || '';
+    const requirement = c.requirement || '';
+    const address = c.address || '';
+
     const matchesSearch =
-      c.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.phone.includes(searchTerm) ||
-      c.requirement.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.address.toLowerCase().includes(searchTerm.toLowerCase());
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      phone.includes(searchTerm) ||
+      requirement.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      address.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStage = selectedStage === 'All' || c.stage === selectedStage;
     const matchesStaff = selectedStaff === 'All' || c.assignedStaff === selectedStaff;
@@ -177,23 +214,24 @@ export default function Dashboard({ onViewCustomer }) {
   });
 
   // --- AGGREGATE CALCULATIONS ---
-  const totalCustomersCount = customers.length;
-  const todayReminders = reminders.filter(r => r.status !== 'Completed' && r.reminderDate.split('T')[0] === todayStr);
-  const pendingRemindersCount = reminders.filter(r => r.status === 'Pending' || r.status === 'Snoozed').length;
-  const completedDeals = customers.filter(c => c.stage === 'Confirmed' || c.stage === 'Completed').length;
-  const totalSalesVal = customers.reduce((sum, c) => sum + (c.amount || 0), 0);
-  const pendingPaymentsCount = customers.filter(c => c.pendingAmount > 0).length;
+  const totalCustomersCount = (customers || []).length;
+  const todayReminders = (reminders || []).filter(r => r && r.status !== 'Completed' && (r.reminderDate || '').split('T')[0] === todayStr);
+  const pendingRemindersCount = (reminders || []).filter(r => r && (r.status === 'Pending' || r.status === 'Snoozed')).length;
+  const completedDeals = (customers || []).filter(c => c && (c.stage === 'Confirmed' || c.stage === 'Completed')).length;
+  const totalSalesVal = (customers || []).reduce((sum, c) => sum + (c ? (c.amount || 0) : 0), 0);
+  const pendingPaymentsCount = (customers || []).filter(c => c && (c.pendingAmount || 0) > 0).length;
 
   // --- ALERTS ---
-  const overdueFollowups = reminders.filter(r => r.status !== 'Completed' && r.reminderDate.split('T')[0] < todayStr);
-  const upcomingFollowups = reminders.filter(r => {
-    if (r.status === 'Completed') return false;
-    const remDate = r.reminderDate.split('T')[0];
+  const overdueFollowups = (reminders || []).filter(r => r && r.status !== 'Completed' && (r.reminderDate || '').split('T')[0] < todayStr);
+  const upcomingFollowups = (reminders || []).filter(r => {
+    if (!r || r.status === 'Completed') return false;
+    const remDate = (r.reminderDate || '').split('T')[0];
+    if (!remDate) return false;
     const diffTime = new Date(remDate) - new Date(todayStr);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 && diffDays <= 3;
   });
-  const pendingPaymentAlerts = customers.filter(c => c.pendingAmount > 0 && (c.stage === 'Confirmed' || c.stage === 'Completed'));
+  const pendingPaymentAlerts = (customers || []).filter(c => c && (c.pendingAmount || 0) > 0 && (c.stage === 'Confirmed' || c.stage === 'Completed'));
 
   // --- LOCAL SUPABASE CREATE WORKFLOW ---
   const addCustomer = async (customerData) => {
@@ -1196,16 +1234,16 @@ export default function Dashboard({ onViewCustomer }) {
             Overdue Follow-ups ({overdueFollowups.length})
           </div>
           <div class="alert-item-list">
-            {overdueFollowups.length === 0 ? (
+            {(overdueFollowups || []).length === 0 ? (
               <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '10px' }}>No overdue follow-ups!</div>
             ) : (
-              overdueFollowups.map(r => {
-                const c = customers.find(x => x.id === r.customerId) || {};
+              (overdueFollowups || []).map(r => {
+                const c = (customers || []).find(x => x.id === r?.customerId) || {};
                 return (
-                  <div class="alert-item" key={r.id} onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
-                    <span class="alert-item-text">{c.customerName || 'Unknown'}</span>
+                  <div class="alert-item" key={r?.id} onClick={() => onViewCustomer(c?.id)} style={{ cursor: 'pointer' }}>
+                    <span class="alert-item-text">{c?.customerName || 'Unknown'}</span>
                     <span class="alert-item-time" style={{ color: 'var(--status-red)', fontWeight: '600' }}>
-                      {r.reminderDate.split('T')[0]}
+                      {(r?.reminderDate || '').split('T')[0] || 'No Date'}
                     </span>
                   </div>
                 );
@@ -1224,16 +1262,16 @@ export default function Dashboard({ onViewCustomer }) {
             Upcoming Reminders (3 Days) ({upcomingFollowups.length})
           </div>
           <div class="alert-item-list">
-            {upcomingFollowups.length === 0 ? (
+            {(upcomingFollowups || []).length === 0 ? (
               <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '10px' }}>No upcoming reminders.</div>
             ) : (
-              upcomingFollowups.map(r => {
-                const c = customers.find(x => x.id === r.customerId) || {};
+              (upcomingFollowups || []).map(r => {
+                const c = (customers || []).find(x => x.id === r?.customerId) || {};
                 return (
-                  <div class="alert-item" key={r.id} onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
-                    <span class="alert-item-text">{c.customerName || 'Unknown'}</span>
+                  <div class="alert-item" key={r?.id} onClick={() => onViewCustomer(c?.id)} style={{ cursor: 'pointer' }}>
+                    <span class="alert-item-text">{c?.customerName || 'Unknown'}</span>
                     <span class="alert-item-time" style={{ color: 'var(--status-yellow)' }}>
-                      {r.reminderDate.split('T')[0]}
+                      {(r?.reminderDate || '').split('T')[0] || 'No Date'}
                     </span>
                   </div>
                 );
@@ -1252,14 +1290,14 @@ export default function Dashboard({ onViewCustomer }) {
             Pending Payments Collection ({pendingPaymentAlerts.length})
           </div>
           <div class="alert-item-list">
-            {pendingPaymentAlerts.length === 0 ? (
+            {(pendingPaymentAlerts || []).length === 0 ? (
               <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '10px' }}>All collections cleared!</div>
             ) : (
-              pendingPaymentAlerts.map(c => (
-                <div class="alert-item" key={c.id} onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
-                  <span class="alert-item-text">{c.customerName}</span>
+              (pendingPaymentAlerts || []).map(c => (
+                <div class="alert-item" key={c?.id} onClick={() => onViewCustomer(c?.id)} style={{ cursor: 'pointer' }}>
+                  <span class="alert-item-text">{c?.customerName || 'Unknown'}</span>
                   <span class="alert-item-time" style={{ color: 'var(--status-red)', fontWeight: '600' }}>
-                    ₹{c.pendingAmount} due
+                    ₹{c?.pendingAmount || 0} due
                   </span>
                 </div>
               ))
@@ -1292,8 +1330,8 @@ export default function Dashboard({ onViewCustomer }) {
             <label>Pipeline Stage</label>
             <select class="form-input" value={selectedStage} onChange={e => setSelectedStage(e.target.value)}>
               <option value="All">All Stages</option>
-              {stages.map(s => (
-                <option key={s.stageName} value={s.stageName}>{s.stageName}</option>
+              {(stages || []).map(s => (
+                <option key={s?.stageName} value={s?.stageName}>{s?.stageName}</option>
               ))}
             </select>
           </div>
@@ -1302,7 +1340,7 @@ export default function Dashboard({ onViewCustomer }) {
             <label>Assigned Staff</label>
             <select class="form-input" value={selectedStaff} onChange={e => setSelectedStaff(e.target.value)}>
               <option value="All">All Staff</option>
-              {staffList.map(s => (
+              {(staffList || []).map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -1340,14 +1378,16 @@ export default function Dashboard({ onViewCustomer }) {
               </tr>
             </thead>
             <tbody>
-              {filteredCustomers.map(c => {
+              {(filteredCustomers || []).map(c => {
+                if (!c) return null;
+                const stageColor = (stages || []).find(s => s.stageName === c.stage)?.stageColor || '#3B82F6';
                 return (
                   <tr key={c.id}>
                     {/* Customer Info */}
                     <td data-label="Customer" onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
                       <div class="customer-cell">
-                        <span class="name">{c.customerName}</span>
-                        <span class="phone">{c.phone}</span>
+                        <span class="name">{c.customerName || 'Unknown'}</span>
+                        <span class="phone">{c.phone || ''}</span>
                       </div>
                     </td>
 
@@ -1363,12 +1403,12 @@ export default function Dashboard({ onViewCustomer }) {
                       <span
                         class="badge"
                         style={{
-                          backgroundColor: `${stages.find(s => s.stageName === c.stage)?.stageColor || '#3B82F6'}18`,
-                          color: stages.find(s => s.stageName === c.stage)?.stageColor || '#3B82F6',
-                          border: `1px solid ${stages.find(s => s.stageName === c.stage)?.stageColor}40`
+                          backgroundColor: `${stageColor}18`,
+                          color: stageColor,
+                          border: `1px solid ${stageColor}40`
                         }}
                       >
-                        {c.stage}
+                        {c.stage || 'New Lead'}
                       </span>
                     </td>
 
@@ -1380,10 +1420,10 @@ export default function Dashboard({ onViewCustomer }) {
                     {/* Payment Status Badges */}
                     <td data-label="Payment">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span class={`badge badge-payment-${c.paymentStatus.toLowerCase()}`}>
-                          {c.paymentStatus}
+                        <span class={`badge badge-payment-${(c.paymentStatus || 'Pending').toLowerCase()}`}>
+                          {c.paymentStatus || 'Pending'}
                         </span>
-                        {c.pendingAmount > 0 && (
+                        {(c.pendingAmount || 0) > 0 && (
                           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>
                             Bal: ₹{c.pendingAmount}
                           </span>
@@ -1424,7 +1464,7 @@ export default function Dashboard({ onViewCustomer }) {
                         {/* WhatsApp */}
                         {c.phone && (
                           <a
-                            href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName)},%20this%20is%20regarding%20your%20requirement%20for%20${encodeURIComponent(c.requirement)}.`}
+                            href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName || '')},%20this%20is%20regarding%20your%20requirement%20for%20${encodeURIComponent(c.requirement || '')}.`}
                             target="_blank"
                             rel="noopener noreferrer"
                             class="action-btn-circle whatsapp"
@@ -1516,28 +1556,32 @@ export default function Dashboard({ onViewCustomer }) {
             </div>
             <div class="modal-body">
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
-                Select the next sales stage for <strong>{customers.find(x => x.id === selectedCustId)?.customerName}</strong>.
+                Select the next sales stage for <strong>{(customers || []).find(x => x.id === selectedCustId)?.customerName || 'Customer'}</strong>.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {stages.map(stg => (
-                  <button
-                    key={stg.stageName}
-                    class="btn btn-secondary"
-                    style={{
-                      justifyContent: 'flex-start',
-                      borderColor: customers.find(x => x.id === selectedCustId)?.stage === stg.stageName ? 'var(--accent)' : 'var(--border-color)',
-                      backgroundColor: customers.find(x => x.id === selectedCustId)?.stage === stg.stageName ? 'var(--accent-glow)' : 'var(--bg-card)'
-                    }}
-                    onClick={() => {
-                      updateCustomerStage(selectedCustId, stg.stageName);
-                      setIsQuickMoveOpen(false);
-                      setSelectedCustId(null);
-                    }}
-                  >
-                    <span class="stage-color-dot" style={{ backgroundColor: stg.stageColor, marginRight: '8px' }}></span>
-                    {stg.stageName}
-                  </button>
-                ))}
+                {(stages || []).map(stg => {
+                  const currentCustomerStage = (customers || []).find(x => x.id === selectedCustId)?.stage;
+                  const isCurrent = currentCustomerStage === stg?.stageName;
+                  return (
+                    <button
+                      key={stg?.stageName}
+                      class="btn btn-secondary"
+                      style={{
+                        justifyContent: 'flex-start',
+                        borderColor: isCurrent ? 'var(--accent)' : 'var(--border-color)',
+                        backgroundColor: isCurrent ? 'var(--accent-glow)' : 'var(--bg-card)'
+                      }}
+                      onClick={() => {
+                        updateCustomerStage(selectedCustId, stg?.stageName);
+                        setIsQuickMoveOpen(false);
+                        setSelectedCustId(null);
+                      }}
+                    >
+                      <span class="stage-color-dot" style={{ backgroundColor: stg?.stageColor || '#3B82F6', marginRight: '8px' }}></span>
+                      {stg?.stageName}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1555,7 +1599,7 @@ export default function Dashboard({ onViewCustomer }) {
             <form onSubmit={handleQuickNoteSubmit}>
               <div class="modal-body">
                 <p style={{ fontSize: '13px', marginBottom: '10px' }}>
-                  Logging note for: <strong>{customers.find(x => x.id === selectedCustId)?.customerName}</strong>
+                  Logging note for: <strong>{(customers || []).find(x => x.id === selectedCustId)?.customerName || 'Customer'}</strong>
                 </p>
                 <textarea
                   class="textarea-input"
@@ -1587,7 +1631,7 @@ export default function Dashboard({ onViewCustomer }) {
               <div class="modal-body">
                 <div class="form-grid">
                   <p style={{ fontSize: '13.5px', gridColumn: '1 / -1' }}>
-                    Scheduling for: <strong>{customers.find(x => x.id === selectedCustId)?.customerName}</strong>
+                    Scheduling for: <strong>{(customers || []).find(x => x.id === selectedCustId)?.customerName || 'Customer'}</strong>
                   </p>
 
                   <div>

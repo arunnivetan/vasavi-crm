@@ -33,7 +33,7 @@ export default function CustomerDetail({ customerId, onBack }) {
     logPdfGeneration
   } = useCRMDatabase();
 
-  const customer = customers.find(c => c.id === customerId);
+  const customer = (customers || []).find(c => c.id === customerId);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
@@ -45,10 +45,10 @@ export default function CustomerDetail({ customerId, onBack }) {
   }, [customer, onBack]);
 
   // --- DYNAMIC DATA QUERIES ---
-  const customerNotes = notes.filter(n => n.customerId === customerId);
-  const customerPayments = payments.filter(p => p.customerId === customerId);
-  const customerActivities = activities.filter(a => a.customerId === customerId);
-  const customerReminders = reminders.filter(r => r.customerId === customerId);
+  const customerNotes = (notes || []).filter(n => n && n.customerId === customerId);
+  const customerPayments = (payments || []).filter(p => p && p.customerId === customerId);
+  const customerActivities = (activities || []).filter(a => a && a.customerId === customerId);
+  const customerReminders = (reminders || []).filter(r => r && r.customerId === customerId);
 
   // --- STATE STORES ---
   const [activeTab, setActiveTab] = useState('notes'); // 'notes' or 'history'
@@ -530,14 +530,14 @@ export default function CustomerDetail({ customerId, onBack }) {
                       border: '1px solid var(--border-color)',
                       width: '100%'
                     }}>
-                    {customer.items.map((item, idx) => (
+                    {(customerItems || []).map((item, idx) => (
                       <div key={idx} style={{
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         fontSize: '12px',
-                        borderBottom: idx === customer.items.length - 1 ? 'none' : '1px dashed rgba(255,255,255,0.05)',
-                        paddingBottom: idx === customer.items.length - 1 ? '0' : '6px'
+                        borderBottom: idx === (customerItems || []).length - 1 ? 'none' : '1px dashed rgba(255,255,255,0.05)',
+                        paddingBottom: idx === (customerItems || []).length - 1 ? '0' : '6px'
                       }}>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                           <span style={{ fontWeight: '700', color: 'var(--text-white)' }}>{item.productName}</span>
@@ -820,34 +820,38 @@ export default function CustomerDetail({ customerId, onBack }) {
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
-              {customerReminders.length === 0 ? (
+              {(customerReminders || []).length === 0 ? (
                 <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '12px', padding: '10px' }}>
                   No follow-up reminder alerts scheduled.
                 </div>
               ) : (
-                customerReminders
-                  .sort((a, b) => new Date(a.reminderDate) - new Date(b.reminderDate))
-                  .map(r => (
-                    <div
-                      key={r.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyBetween: 'space-between',
-                        padding: '10px',
-                        backgroundColor: 'var(--bg-main)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '8px',
-                        borderLeft: `4px solid ${r.status === 'Completed' ? 'var(--status-green)' : r.reminderDate.split('T')[0] < todayStr ? 'var(--status-red)' : 'var(--status-yellow)'}`
-                      }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '700', color: r.status === 'Completed' ? 'var(--text-muted)' : 'var(--text-white)' }}>
-                          {r.reminderType} {r.status === 'Completed' && '✓'}
-                        </span>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          Due: {r.reminderDate.replace('T', ' ')}
-                        </span>
+                (customerReminders || [])
+                  .sort((a, b) => new Date(a?.reminderDate || 0) - new Date(b?.reminderDate || 0))
+                  .map(r => {
+                    const remDate = r?.reminderDate || '';
+                    const remDateOnly = remDate.split('T')[0] || '';
+                    const isOverdue = remDateOnly && remDateOnly < todayStr;
+                    return (
+                      <div
+                        key={r?.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyBetween: 'space-between',
+                          padding: '10px',
+                          backgroundColor: 'var(--bg-main)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          borderLeft: `4px solid ${r?.status === 'Completed' ? 'var(--status-green)' : isOverdue ? 'var(--status-red)' : 'var(--status-yellow)'}`
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '700', color: r?.status === 'Completed' ? 'var(--text-muted)' : 'var(--text-white)' }}>
+                            {r?.reminderType} {r?.status === 'Completed' && '✓'}
+                          </span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            Due: {remDate.replace('T', ' ') || 'No Date'}
+                          </span>
                         {r.notes && (
                           <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                             Note: {r.notes}
@@ -878,7 +882,8 @@ export default function CustomerDetail({ customerId, onBack }) {
                         </div>
                       )}
                     </div>
-                  ))
+                    );
+                  })
               )}
             </div>
           </div>

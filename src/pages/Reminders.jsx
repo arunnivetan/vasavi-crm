@@ -25,21 +25,21 @@ export default function Reminders({ onViewCustomer }) {
   const [newNotes, setNewNotes] = useState('');
 
   // --- DATA FILTERING ---
-  const activeReminders = reminders.filter(r => r.status === 'Pending' || r.status === 'Snoozed');
+  const activeReminders = (reminders || []).filter(r => r && (r.status === 'Pending' || r.status === 'Snoozed'));
   
-  const todayReminders = activeReminders.filter(r => r.reminderDate.split('T')[0] === todayStr);
+  const todayReminders = activeReminders.filter(r => r && (r.reminderDate || '').split('T')[0] === todayStr);
   const upcomingReminders = activeReminders
-    .filter(r => r.reminderDate.split('T')[0] > todayStr)
-    .sort((a, b) => new Date(a.reminderDate) - new Date(b.reminderDate));
+    .filter(r => r && (r.reminderDate || '').split('T')[0] > todayStr)
+    .sort((a, b) => new Date(a?.reminderDate || 0) - new Date(b?.reminderDate || 0));
   
   const overdueReminders = activeReminders
-    .filter(r => r.reminderDate.split('T')[0] < todayStr)
-    .sort((a, b) => new Date(a.reminderDate) - new Date(b.reminderDate));
+    .filter(r => r && (r.reminderDate || '').split('T')[0] < todayStr)
+    .sort((a, b) => new Date(a?.reminderDate || 0) - new Date(b?.reminderDate || 0));
   
   // Merge Overdue and Today into high priority active checklist
   const todayAndOverdueList = [...overdueReminders, ...todayReminders];
 
-  const completedCount = reminders.filter(r => r.status === 'Completed').length;
+  const completedCount = (reminders || []).filter(r => r && r.status === 'Completed').length;
 
   // --- HANDLERS ---
   const handleSnoozeClick = (remId) => {
@@ -160,8 +160,8 @@ export default function Reminders({ onViewCustomer }) {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {todayAndOverdueList.map(rem => {
-              const cust = customers.find(c => c.id === rem.customerId) || { customerName: 'Unknown Client', phone: '' };
-              const isOverdue = rem.reminderDate.split('T')[0] < todayStr;
+              const cust = (customers || []).find(c => c.id === rem.customerId) || { customerName: 'Unknown Client', phone: '' };
+              const isOverdue = (rem.reminderDate || '').split('T')[0] < todayStr;
               
               return (
                 <div
@@ -214,7 +214,7 @@ export default function Reminders({ onViewCustomer }) {
                       }}
                     >
                     </button>
-
+ 
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span
@@ -232,7 +232,7 @@ export default function Reminders({ onViewCustomer }) {
                           </span>
                         ) : (
                           <span style={{ fontSize: '8px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--status-yellow)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            {rem.reminderDate.split('T')[1]?.substring(0, 5) || '10:00 AM'}
+                            {(rem.reminderDate || '').split('T')[1]?.substring(0, 5) || '10:00 AM'}
                           </span>
                         )}
 
@@ -319,7 +319,7 @@ export default function Reminders({ onViewCustomer }) {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {upcomingReminders.map(rem => {
-              const cust = customers.find(c => c.id === rem.customerId) || { customerName: 'Unknown Client', phone: '' };
+              const cust = (customers || []).find(c => c.id === rem.customerId) || { customerName: 'Unknown Client', phone: '' };
               return (
                 <div
                   key={rem.id}
@@ -354,7 +354,7 @@ export default function Reminders({ onViewCustomer }) {
                       </span>
                     )}
                     <span style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: '500', display: 'block', marginTop: '4px' }}>
-                      📅 Due: {rem.reminderDate.split('T')[0]}
+                      📅 Due: {(rem.reminderDate || '').split('T')[0] || 'No Date'}
                     </span>
                   </div>
 
@@ -488,9 +488,9 @@ export default function Reminders({ onViewCustomer }) {
                     onChange={e => setNewCustId(e.target.value)}
                     required
                   >
-                    {customers.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.customerName} ({c.phone || 'No Phone'})
+                    {(customers || []).map(c => (
+                      <option key={c?.id} value={c?.id}>
+                        {c?.customerName || 'Unknown'} ({c?.phone || 'No Phone'})
                       </option>
                     ))}
                   </select>
