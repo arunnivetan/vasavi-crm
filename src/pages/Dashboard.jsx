@@ -283,6 +283,9 @@ export default function Dashboard({ onViewCustomer }) {
       setIsAddModalOpen(false);
     } catch (err) {
       console.error('[Dashboard] Error completing client file creation:', err);
+      alert(`Failed to create customer file: ${err?.message || err}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 

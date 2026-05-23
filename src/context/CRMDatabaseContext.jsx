@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { databaseService } from '../lib/databaseService';
-import { getImagesFromDB, saveImageToDB, deleteImageFromDB } from '../utils/db';
 import { supabase } from '../lib/supabase';
 
 const CRMDatabaseContext = createContext(null);
@@ -60,7 +59,7 @@ export const CRMDatabaseProvider = ({ children }) => {
 
   // --- BUSINESS LOGIC MUTATIONS WITH PURE SUPABASE CRUD ---
 
-  // 1. Add Customer
+  // 1. Add Customer (with decoupled try/catch blocks for child inserts to prevent transaction hangs)
   const addCustomer = async (customerData, staffName = activeStaff) => {
     try {
       console.log('[CRM Context] Adding customer via Supabase:', customerData?.customerName);
@@ -109,52 +108,72 @@ export const CRMDatabaseProvider = ({ children }) => {
         isDeleted: false 
       };
 
-      // 1. Insert Customer Record into Supabase
+      // 1. Insert Customer Record into Supabase (Must complete first)
       const created = await databaseService.createCustomer(newCustomer);
+      const activeCustomerId = created?.id || newId;
+      console.log(`[CRM Context] Customer inserted successfully. Active ID: ${activeCustomerId}`);
 
-      // 2. Insert initial payment record if advance was paid
+      // 2. Insert initial payment record if advance was paid (Decoupled)
       if (advancePaid > 0) {
-        const newPayRecord = {
-          id: 'pay_' + Date.now(),
-          customerId: newId,
-          amountPaid: advancePaid,
-          paymentMode: customerData?.paymentMode || 'Cash',
-          updatedBy: staffName,
-          timestamp: new Date().toISOString(),
-          note: 'Initial Advance Payment'
-        };
-        await databaseService.savePayment(newPayRecord);
+        try {
+          console.log('[CRM Context] Creating decoupled initial payment record...');
+          const newPayRecord = {
+            id: 'pay_' + Date.now(),
+            customerId: activeCustomerId,
+            amountPaid: advancePaid,
+            paymentMode: customerData?.paymentMode || 'Cash',
+            updatedBy: staffName,
+            timestamp: new Date().toISOString(),
+            note: 'Initial Advance Payment'
+          };
+          await databaseService.savePayment(newPayRecord);
+          console.log('[CRM Context] Initial payment saved successfully.');
+        } catch (payErr) {
+          console.error('[CRM Context] Decoupled payment insert failed:', payErr?.message || payErr);
+        }
       }
 
-      // 3. Log activity history
-      const activity = {
-        customerId: newId,
-        actionType: 'customer_created',
-        oldValue: '',
-        newValue: `${newCustomer.customerName} added with ${items?.length || 0} items. Total: Rs. ${totalAmount}`,
-        updatedBy: staffName,
-        timestamp: new Date().toISOString()
-      };
-      await databaseService.saveActivity(activity);
-
-      // 4. Set follow-up reminder if followupDate is provided
-      if (newCustomer.followupDate) {
-        const newReminder = {
-          id: 'rem_' + Date.now(),
-          customerId: newId,
-          reminderType: 'Follow-up Call',
-          reminderDate: newCustomer.followupDate,
-          status: 'Pending',
-          notes: 'Auto-created from customer creation'
+      // 3. Log activity history (Decoupled)
+      try {
+        console.log('[CRM Context] Logging customer_created activity...');
+        const activity = {
+          customerId: activeCustomerId,
+          actionType: 'customer_created',
+          oldValue: '',
+          newValue: `${newCustomer.customerName} added with ${items?.length || 0} items. Total: Rs. ${totalAmount}`,
+          updatedBy: staffName,
+          timestamp: new Date().toISOString()
         };
-        await databaseService.saveReminder(newReminder);
+        await databaseService.saveActivity(activity);
+        console.log('[CRM Context] Customer activity log saved.');
+      } catch (actErr) {
+        console.error('[CRM Context] Decoupled activity insert failed:', actErr?.message || actErr);
+      }
+
+      // 4. Set follow-up reminder if followupDate is provided (Decoupled)
+      if (newCustomer.followupDate) {
+        try {
+          console.log('[CRM Context] Setting followup reminder alert...');
+          const newReminder = {
+            id: 'rem_' + Date.now(),
+            customerId: activeCustomerId,
+            reminderType: 'Follow-up Call',
+            reminderDate: newCustomer.followupDate,
+            status: 'Pending',
+            notes: 'Auto-created from customer creation'
+          };
+          await databaseService.saveReminder(newReminder);
+          console.log('[CRM Context] Followup reminder saved.');
+        } catch (remErr) {
+          console.error('[CRM Context] Decoupled reminder insert failed:', remErr?.message || remErr);
+        }
       }
 
       // Live refresh database context state
       await refreshDatabase();
       return created;
     } catch (err) {
-      console.error('[CRM Context] addCustomer Exception:', err?.message || err);
+      console.error('[CRM Context] addCustomer Main Exception:', err?.message || err);
       throw err;
     }
   };
@@ -567,17 +586,17 @@ export const CRMDatabaseProvider = ({ children }) => {
     }
   };
 
-  // 9. Site Photos & Blueprints Upload (IndexedDB direct integration)
+  // 9. Site Photos & Blueprints Upload (Supabase Cloud Storage bucket integration)
   const uploadCustomerImage = async (customerId, file, imageType, staffName = activeStaff) => {
     try {
-      const imgRecord = await saveImageToDB(customerId, file, imageType, staffName);
+      const imgRecord = await databaseService.uploadCustomerFile(customerId, file, imageType, staffName);
       
       // Log activity
       const activity = {
         customerId,
         actionType: 'image_uploaded',
         oldValue: '',
-        newValue: `Uploaded file: [${imageType}] ${file?.name || 'file'}`,
+        newValue: `Uploaded file to cloud: [${imageType}] ${file?.name || 'file'}`,
         updatedBy: staffName,
         timestamp: new Date().toISOString()
       };
@@ -591,19 +610,23 @@ export const CRMDatabaseProvider = ({ children }) => {
   };
 
   const getCustomerImages = async (customerId) => {
-    return await getImagesFromDB(customerId);
+    return await databaseService.fetchFiles(customerId);
   };
 
   const deleteCustomerImage = async (imageId, customerId, fileName, staffName = activeStaff) => {
     try {
-      await deleteImageFromDB(imageId);
+      const filesList = await databaseService.fetchFiles(customerId);
+      const fileRecord = filesList.find(f => f.id === imageId);
+      const fileUrl = fileRecord ? fileRecord.fileUrl : '';
+
+      await databaseService.deleteCustomerFile(imageId, customerId, fileUrl);
       
       // Log activity
       const activity = {
         customerId,
         actionType: 'image_deleted',
         oldValue: '',
-        newValue: `Deleted file: ${fileName}`,
+        newValue: `Deleted cloud file: ${fileName}`,
         updatedBy: staffName,
         timestamp: new Date().toISOString()
       };
