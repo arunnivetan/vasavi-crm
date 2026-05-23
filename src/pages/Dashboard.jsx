@@ -31,7 +31,8 @@ export default function Dashboard({ onViewCustomer }) {
     createReminder,
     logPdfGeneration,
     refreshDatabase,
-    isLoading
+    isLoading,
+    addCustomer
   } = useCRMDatabase();
 
   // --- FILTERS STATE ---
@@ -233,135 +234,13 @@ export default function Dashboard({ onViewCustomer }) {
   });
   const pendingPaymentAlerts = (customers || []).filter(c => c && (c.pendingAmount || 0) > 0 && (c.stage === 'Confirmed' || c.stage === 'Completed'));
 
-  // --- LOCAL SUPABASE CREATE WORKFLOW ---
-  const addCustomer = async (customerData) => {
-    setIsSaving(true);
-    try {
-      console.log('[Dashboard] Inserting customer via Supabase:', customerData?.customerName);
-      const newId = 'cust_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-      
-      const items = customerData?.items || [];
-      const subtotal = parseFloat(customerData?.subtotal || 0);
-      const discount = parseFloat(customerData?.discount || 0);
-      const taxPercent = parseFloat(customerData?.taxPercent || 0);
-      const taxAmount = parseFloat(customerData?.taxAmount || 0);
-      const totalAmount = parseFloat(customerData?.amount || (subtotal - discount + taxAmount));
-      
-      const advancePaid = parseFloat(customerData?.advancePaid || 0);
-      const pendingAmount = totalAmount - advancePaid;
-      let paymentStatus = 'Pending';
-      if (advancePaid > 0) {
-        paymentStatus = pendingAmount <= 0 ? 'Paid' : 'Partial';
-      }
-
-      // Map strictly to match Supabase table columns: name, phone, project_type, sales_stage, final_bill, advance_paid, pending_balance
-      const dbPayload = {
-        id: newId,
-        name: customerData?.customerName || '',
-        phone: customerData?.phone || '',
-        address: customerData?.address || '',
-        requirement: customerData?.requirement || 'Standard supplies',
-        project_type: customerData?.projectType || 'Hardware',
-        sales_stage: customerData?.stage || 'New Lead',
-        assignedStaff: customerData?.assignedStaff || 'Suresh',
-        followupDate: customerData?.followupDate || '',
-        items: items,
-        subtotal: subtotal,
-        discount: discount,
-        tax_percent: taxPercent,
-        tax_amount: taxAmount,
-        final_bill: totalAmount,
-        advance_paid: advancePaid,
-        pending_balance: pendingAmount,
-        payment_status: paymentStatus,
-        priority: customerData?.priority || 'Medium',
-        tags: customerData?.tags || [],
-        created_at: new Date().toISOString(),
-        is_deleted: false
-      };
-
-      // 1. Direct Supabase insert
-      const { data, error } = await supabase
-        .from('customers')
-        .insert([dbPayload])
-        .select();
-
-      if (error) {
-        console.error('[Dashboard] Supabase client creation failed:', error);
-        throw error;
-      }
-
-      console.log('[Dashboard] Direct Supabase customer creation success:', data);
-
-      // 2. Initial payment record insertion if applicable
-      if (advancePaid > 0) {
-        const payRecord = {
-          id: 'pay_' + Date.now(),
-          customerId: newId,
-          amountPaid: advancePaid,
-          paymentMode: customerData?.paymentMode || 'Cash',
-          updatedBy: customerData?.assignedStaff || 'Suresh',
-          timestamp: new Date().toISOString(),
-          note: 'Initial Advance Payment'
-        };
-        const { error: payErr } = await supabase.from('payments').insert([payRecord]);
-        if (payErr) {
-          console.error('[Dashboard] Supabase payment insertion error:', payErr);
-        }
-      }
-
-      // 3. Activity record insertion
-      const activityRecord = {
-        customerId: newId,
-        actionType: 'customer_created',
-        oldValue: '',
-        newValue: `${dbPayload.name} added with ${items.length} items. Total: Rs. ${totalAmount}`,
-        updatedBy: customerData?.assignedStaff || 'Suresh',
-        timestamp: new Date().toISOString()
-      };
-      const { error: actErr } = await supabase.from('activities').insert([activityRecord]);
-      if (actErr) {
-        console.error('[Dashboard] Supabase activity logging error:', actErr);
-      }
-
-      // 4. Follow-up reminder insertion
-      if (customerData?.followupDate) {
-        const reminderRecord = {
-          id: 'rem_' + Date.now(),
-          customerId: newId,
-          reminderType: 'Follow-up Call',
-          reminderDate: customerData.followupDate,
-          status: 'Pending',
-          notes: 'Auto-created from customer creation'
-        };
-        const { error: remErr } = await supabase.from('reminders').insert([reminderRecord]);
-        if (remErr) {
-          console.error('[Dashboard] Supabase reminder insertion error:', remErr);
-        }
-      }
-
-      // 5. Refresh active listings
-      if (refreshDatabase && typeof refreshDatabase === 'function') {
-        console.log('[Dashboard] Triggering context sync after customer insert...');
-        await refreshDatabase();
-      }
-
-      return data;
-    } catch (err) {
-      console.error('[Dashboard] addCustomer direct exception captured:', err?.message || err);
-      alert('Error adding customer file: ' + (err?.message || err || 'Unknown Database error'));
-      throw err;
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   // --- FORM HANDLERS ---
   const handleCreateCustomer = async (e) => {
     if (e) e.preventDefault();
     if (!newCustName.trim()) return;
 
     const activeItems = newCustItems.filter(item => item?.productName?.trim() !== '');
+    setIsSaving(true);
 
     try {
       await addCustomer({

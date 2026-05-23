@@ -64,7 +64,7 @@ export const CRMDatabaseProvider = ({ children }) => {
   const addCustomer = async (customerData, staffName = activeStaff) => {
     try {
       console.log('[CRM Context] Adding customer via Supabase:', customerData?.customerName);
-      const newId = 'cust_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      const newId = crypto.randomUUID();
       
       // items and math calculation
       const items = customerData?.items || [];

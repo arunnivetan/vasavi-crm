@@ -102,7 +102,7 @@ export default function Pipeline({ onViewCustomer }) {
 
       {/* HORIZONTAL SCROLL KANBAN PIPELINE */}
       <div class="pipeline-scroll-container">
-        {stages
+        {[...stages]
           .sort((a, b) => a.stageOrder - b.stageOrder)
           .map(stg => {
             const stageCustomers = customers.filter(c => c.stage === stg.stageName);
@@ -260,7 +260,7 @@ export default function Pipeline({ onViewCustomer }) {
               <div style={{ marginBottom: '20px' }}>
                 <h4 style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Active Columns Layout</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '6px' }}>
-                  {stages
+                  {[...stages]
                     .sort((a, b) => a.stageOrder - b.stageOrder)
                     .map((s, idx) => (
                       <div key={s.stageName} style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', padding: '6px 10px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '6px' }}>

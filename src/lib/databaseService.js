@@ -14,59 +14,59 @@ console.log(`[Database Engine] Supabase configured status: ${isSupabaseConfigure
 // --- DATA SCHEMA TRANSLATION MAPPERS ---
 const mapToSupabase = (c) => {
   if (!c) return {};
+  const advance = parseFloat(c.advancePaid || 0);
+  const total = parseFloat(c.amount || 0);
+  const pending = total - advance;
+  
   return {
     id: c.id,
     name: c.customerName || '',
     phone: c.phone || '',
-    address: c.address || '',
     project_type: c.projectType || 'Hardware',
     sales_stage: c.stage || 'New Lead',
-    final_bill: parseFloat(c.amount || 0),
-    advance_paid: parseFloat(c.advancePaid || 0),
-    pending_balance: parseFloat(c.pendingAmount || 0),
-    priority: c.priority || 'Medium',
-    items: c.items || [],
-    subtotal: parseFloat(c.subtotal || 0),
-    discount: parseFloat(c.discount || 0),
-    tax_percent: parseFloat(c.taxPercent || 18),
-    tax_amount: parseFloat(c.taxAmount || 0),
-    payment_status: c.paymentStatus || 'Pending',
-    is_deleted: c.isDeleted || false,
+    final_bill: total,
+    advance_paid: advance,
+    pending_balance: pending,
     created_at: c.createdAt || new Date().toISOString()
   };
 };
 
 const mapFromSupabase = (s) => {
   if (!s) return {};
+  const advance = parseFloat(s.advance_paid || 0);
+  const total = parseFloat(s.final_bill || 0);
+  const pending = parseFloat(s.pending_balance || (total - advance));
+  const paymentStatus = advance === 0 ? 'Pending' : (pending <= 0 ? 'Paid' : 'Partial');
+
   return {
     id: s.id,
     customerName: s.name || '',
     phone: s.phone || '',
-    address: s.address || '',
+    address: '',
     projectType: s.project_type || 'Hardware',
     stage: s.sales_stage || 'New Lead',
-    amount: parseFloat(s.final_bill || 0),
-    advancePaid: parseFloat(s.advance_paid || 0),
-    pendingAmount: parseFloat(s.pending_balance || 0),
-    priority: s.priority || 'Medium',
-    items: s.items || [],
-    subtotal: parseFloat(s.subtotal || 0),
-    discount: parseFloat(s.discount || 0),
-    taxPercent: parseFloat(s.tax_percent || 18),
-    taxAmount: parseFloat(s.tax_amount || 0),
-    paymentStatus: s.payment_status || 'Pending',
-    isDeleted: s.is_deleted || false,
+    amount: total,
+    advancePaid: advance,
+    pendingAmount: pending,
+    priority: 'Medium',
+    items: [],
+    subtotal: total,
+    discount: 0,
+    taxPercent: 0,
+    taxAmount: 0,
+    paymentStatus: paymentStatus,
+    isDeleted: false,
     createdAt: s.created_at || new Date().toISOString(),
-    requirement: (s.items || []).map(item => `${item?.productName || ''} (${item?.qty || 0} ${item?.unit || ''} @ Rs. ${item?.rate || 0})`).join(', ') || 'Standard supplies'
+    requirement: `${s.project_type || 'Hardware'} - Plywood & Hardwares`
   };
 };
 
 const defaultStages = [
   { stageName: 'New Lead', stageColor: '#3B82F6', stageOrder: 1 },
-  { stageName: 'Contacted', stageColor: '#F59E0B', stageOrder: 2 },
-  { stageName: 'Site Visit', stageColor: '#A855F7', stageOrder: 3 },
-  { stageName: 'Confirmed', stageColor: '#10B981', stageOrder: 4 },
-  { stageName: 'Completed', stageColor: '#14B8A6', stageOrder: 5 }
+  { stageName: 'Quotation Sent', stageColor: '#F59E0B', stageOrder: 2 },
+  { stageName: 'Negotiation', stageColor: '#A855F7', stageOrder: 3 },
+  { stageName: 'Converted', stageColor: '#10B981', stageOrder: 4 },
+  { stageName: 'Lost', stageColor: '#EF4444', stageOrder: 5 }
 ];
 
 export const databaseService = {
@@ -92,13 +92,35 @@ export const databaseService = {
     }
   },
 
+  // --- LOCAL STORAGE HELPERS FOR FALLBACK ---
+  getLocalData(key, defaultVal = []) {
+    if (typeof window === 'undefined' || !window.localStorage) return defaultVal;
+    try {
+      const val = localStorage.getItem(key);
+      return val ? JSON.parse(val) : defaultVal;
+    } catch (e) {
+      console.error(`[LocalStorage Helper] Error reading ${key}:`, e);
+      return defaultVal;
+    }
+  },
+
+  saveLocalData(key, data) {
+    if (typeof window === 'undefined' || !window.localStorage) return false;
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      return true;
+    } catch (e) {
+      console.error(`[LocalStorage Helper] Error writing ${key}:`, e);
+      return false;
+    }
+  },
+
   async getCustomers() {
     try {
       console.log('[Database Service] Fetching active customers...');
       const { data, error } = await supabase
         .from('customers')
         .select('*')
-        .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -150,14 +172,14 @@ export const databaseService = {
 
   async deleteCustomer(customerId) {
     try {
-      console.log('[Database Service] Soft deleting customer:', customerId);
+      console.log('[Database Service] Hard deleting customer since is_deleted column is not present:', customerId);
       const { error } = await supabase
         .from('customers')
-        .update({ is_deleted: true })
+        .delete()
         .eq('id', customerId);
 
       if (error) {
-        console.error('[Database Service] Supabase soft-delete customer error:', error);
+        console.error('[Database Service] Supabase delete customer error:', error);
         throw error;
       }
       return true;
@@ -197,8 +219,8 @@ export const databaseService = {
       if (error) throw error;
       return data || [];
     } catch (err) {
-      console.error('[Database Service] fetchActivities Exception:', err.message || err);
-      return [];
+      console.warn('[Database Service] fetchActivities failed, falling back to localStorage:', err.message || err);
+      return this.getLocalData('vasavi_crm_activities', []);
     }
   },
 
@@ -210,8 +232,11 @@ export const databaseService = {
       if (error) throw error;
       return true;
     } catch (err) {
-      console.error('[Database Service] saveActivity Exception:', err.message || err);
-      return false;
+      console.warn('[Database Service] saveActivity failed, saving to localStorage:', err.message || err);
+      const list = this.getLocalData('vasavi_crm_activities', []);
+      list.unshift(activity);
+      this.saveLocalData('vasavi_crm_activities', list);
+      return true;
     }
   },
 
@@ -225,8 +250,8 @@ export const databaseService = {
       if (error) throw error;
       return data || [];
     } catch (err) {
-      console.error('[Database Service] fetchNotes Exception:', err.message || err);
-      return [];
+      console.warn('[Database Service] fetchNotes failed, falling back to localStorage:', err.message || err);
+      return this.getLocalData('vasavi_crm_notes', []);
     }
   },
 
@@ -238,8 +263,11 @@ export const databaseService = {
       if (error) throw error;
       return true;
     } catch (err) {
-      console.error('[Database Service] saveNote Exception:', err.message || err);
-      return false;
+      console.warn('[Database Service] saveNote failed, saving to localStorage:', err.message || err);
+      const list = this.getLocalData('vasavi_crm_notes', []);
+      list.unshift(note);
+      this.saveLocalData('vasavi_crm_notes', list);
+      return true;
     }
   },
 
@@ -253,8 +281,8 @@ export const databaseService = {
       if (error) throw error;
       return data || [];
     } catch (err) {
-      console.error('[Database Service] fetchPayments Exception:', err.message || err);
-      return [];
+      console.warn('[Database Service] fetchPayments failed, falling back to localStorage:', err.message || err);
+      return this.getLocalData('vasavi_crm_payments', []);
     }
   },
 
@@ -266,8 +294,11 @@ export const databaseService = {
       if (error) throw error;
       return true;
     } catch (err) {
-      console.error('[Database Service] savePayment Exception:', err.message || err);
-      return false;
+      console.warn('[Database Service] savePayment failed, saving to localStorage:', err.message || err);
+      const list = this.getLocalData('vasavi_crm_payments', []);
+      list.unshift(payment);
+      this.saveLocalData('vasavi_crm_payments', list);
+      return true;
     }
   },
 
@@ -280,8 +311,8 @@ export const databaseService = {
       if (error) throw error;
       return data || [];
     } catch (err) {
-      console.error('[Database Service] fetchReminders Exception:', err.message || err);
-      return [];
+      console.warn('[Database Service] fetchReminders failed, falling back to localStorage:', err.message || err);
+      return this.getLocalData('vasavi_crm_reminders', []);
     }
   },
 
@@ -293,8 +324,16 @@ export const databaseService = {
       if (error) throw error;
       return true;
     } catch (err) {
-      console.error('[Database Service] saveReminder Exception:', err.message || err);
-      return false;
+      console.warn('[Database Service] saveReminder failed, saving to localStorage:', err.message || err);
+      const list = this.getLocalData('vasavi_crm_reminders', []);
+      const idx = list.findIndex(r => r.id === reminder.id);
+      if (idx > -1) {
+        list[idx] = { ...list[idx], ...reminder };
+      } else {
+        list.push(reminder);
+      }
+      this.saveLocalData('vasavi_crm_reminders', list);
+      return true;
     }
   },
 
@@ -308,8 +347,9 @@ export const databaseService = {
       if (error) throw error;
       return data && data.length > 0 ? data : defaultStages;
     } catch (err) {
-      console.error('[Database Service] fetchStages Exception, using defaults:', err.message || err);
-      return defaultStages;
+      console.warn('[Database Service] fetchStages failed, falling back to localStorage:', err.message || err);
+      const local = this.getLocalData('vasavi_crm_stages', null);
+      return local && local.length > 0 ? local : defaultStages;
     }
   },
 
@@ -321,8 +361,16 @@ export const databaseService = {
       if (error) throw error;
       return true;
     } catch (err) {
-      console.error('[Database Service] saveStage Exception:', err.message || err);
-      return false;
+      console.warn('[Database Service] saveStage failed, saving to localStorage:', err.message || err);
+      const list = this.getLocalData('vasavi_crm_stages', defaultStages);
+      const idx = list.findIndex(s => s.stageName === stage.stageName);
+      if (idx > -1) {
+        list[idx] = { ...list[idx], ...stage };
+      } else {
+        list.push(stage);
+      }
+      this.saveLocalData('vasavi_crm_stages', list);
+      return true;
     }
   },
 
@@ -334,8 +382,9 @@ export const databaseService = {
       if (error) throw error;
       return true;
     } catch (err) {
-      console.error('[Database Service] saveAllStages Exception:', err.message || err);
-      return false;
+      console.warn('[Database Service] saveAllStages failed, saving to localStorage:', err.message || err);
+      this.saveLocalData('vasavi_crm_stages', stagesList);
+      return true;
     }
   },
 
@@ -348,8 +397,11 @@ export const databaseService = {
       if (error) throw error;
       return true;
     } catch (err) {
-      console.error('[Database Service] deleteStage Exception:', err.message || err);
-      return false;
+      console.warn('[Database Service] deleteStage failed, deleting from localStorage:', err.message || err);
+      const list = this.getLocalData('vasavi_crm_stages', defaultStages);
+      const filtered = list.filter(s => s.stageName !== stageName);
+      this.saveLocalData('vasavi_crm_stages', filtered);
+      return true;
     }
   }
 };
