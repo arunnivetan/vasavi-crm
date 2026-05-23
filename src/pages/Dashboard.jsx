@@ -811,9 +811,8 @@ export default function Dashboard({ onViewCustomer }) {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                  {categories.map((cat, idx) => {
-                    const val = catSubtotals[cat.label] || 0;
-                    if (val === 0) return null;
+                  {donutCategories.map((cat, idx) => {
+                    const val = cat.value;
                     const pct = totalCatVal > 0 ? Math.round((val / totalCatVal) * 100) : 0;
                     return (
                       <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10px' }}>
