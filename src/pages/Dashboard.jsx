@@ -1,0 +1,1497 @@
+import React, { useState } from 'react';
+import { useCRMDatabase } from '../context/CRMDatabaseContext';
+import { generateAllCustomersPDF, generateInvoicePDF } from '../utils/pdfGenerator';
+import { COMMON_PRODUCTS } from '../utils/db';
+
+export default function Dashboard({ onViewCustomer }) {
+  const {
+    customers,
+    activities,
+    payments,
+    reminders,
+    stages,
+    staffList,
+    addCustomer,
+    updateCustomerStage,
+    addPaymentTransaction,
+    addCustomerNote,
+    createReminder,
+    logPdfGeneration
+  } = useCRMDatabase();
+
+  // --- FILTERS STATE ---
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStage, setSelectedStage] = useState('All');
+  const [selectedStaff, setSelectedStaff] = useState('All');
+  const [selectedPriority, setSelectedPriority] = useState('All');
+
+  // --- MODALS STATE ---
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isQuickMoveOpen, setIsQuickMoveOpen] = useState(false);
+  const [selectedCustId, setSelectedCustId] = useState(null);
+  
+  const [isQuickNoteOpen, setIsQuickNoteOpen] = useState(false);
+  const [quickNoteText, setQuickNoteText] = useState('');
+  
+  const [isQuickReminderOpen, setIsQuickReminderOpen] = useState(false);
+  const [quickReminderType, setQuickReminderType] = useState('Follow-up Call');
+  const [quickReminderDate, setQuickReminderDate] = useState('');
+  const [quickReminderNotes, setQuickReminderNotes] = useState('');
+
+  // --- ADD CUSTOMER FORM STATE ---
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('');
+  const [newCustAddress, setNewCustAddress] = useState('');
+  const [newCustDeliveryNotes, setNewCustDeliveryNotes] = useState('');
+  
+  // Costing elements
+  const [newCustItems, setNewCustItems] = useState([
+    { productName: '', qty: 1, unit: 'Sheets', rate: 0, total: 0, status: 'Pending', category: 'Material' }
+  ]);
+  const [newCustDiscount, setNewCustDiscount] = useState('');
+  const [newCustTaxPercent, setNewCustTaxPercent] = useState('18'); // 18% GST default
+
+  const [newCustProjType, setNewCustProjType] = useState('Hardware');
+  const [newCustStage, setNewCustStage] = useState('New Lead');
+  const [newCustStaff, setNewCustStaff] = useState('Suresh');
+  const [newCustPriority, setNewCustPriority] = useState('Medium');
+  const [newCustAdvance, setNewCustAdvance] = useState('');
+  const [newCustPayMode, setNewCustPayMode] = useState('Cash');
+  const [newCustFollowupDate, setNewCustFollowupDate] = useState('');
+
+  // Uploader mock state
+  const [uploads, setUploads] = useState([
+    { name: 'blueprint_main_rev3.dwg', size: '4.8 MB', type: 'Blueprint', time: 'Just now' },
+    { name: 'site_measurement_front.jpg', size: '2.1 MB', type: 'Site Image', time: '1 hour ago' }
+  ]);
+
+  // Notes state inside Create Workspace
+  const [createWorkspaceNote, setCreateWorkspaceNote] = useState('');
+
+  // --- INTERACTIVE MATH CALCULATOR ---
+  const subtotal = newCustItems.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
+  const discountVal = parseFloat(newCustDiscount || 0);
+  const taxPercentVal = parseFloat(newCustTaxPercent || 0);
+  const taxAmount = ((subtotal - discountVal) * taxPercentVal) / 100;
+  const grandTotal = Math.max(0, subtotal - discountVal + taxAmount);
+  const advancePaidVal = parseFloat(newCustAdvance || 0);
+  const pendingBalance = Math.max(0, grandTotal - advancePaidVal);
+
+  // Category wise aggregates
+  const catSubtotals = {
+    Material: newCustItems.filter(i => i.category === 'Material').reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0),
+    Installation: newCustItems.filter(i => i.category === 'Installation').reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0),
+    Automation: newCustItems.filter(i => i.category === 'Automation').reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0),
+    Labor: newCustItems.filter(i => i.category === 'Labor').reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0),
+    Miscellaneous: newCustItems.filter(i => i.category === 'Miscellaneous').reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0),
+  };
+
+  const totalCatVal = Object.values(catSubtotals).reduce((sum, v) => sum + v, 0);
+
+  // Quick stats
+  const totalMaterialsCount = newCustItems.filter(item => item.productName.trim() !== '').length;
+  const totalQtySum = newCustItems.reduce((sum, item) => sum + (parseFloat(item.qty) || 0), 0);
+  const pendingItemsCount = newCustItems.filter(item => item.status === 'Pending').length;
+  const derivedPaymentStatus = advancePaidVal === 0 ? 'Pending' : advancePaidVal >= grandTotal ? 'Paid' : 'Partial';
+
+  // --- COSTING TABLE HANDLERS ---
+  const handleItemChange = (index, field, value) => {
+    const updated = newCustItems.map((item, i) => {
+      if (i === index) {
+        const updatedItem = { ...item, [field]: value };
+        if (field === 'qty' || field === 'rate') {
+          const q = parseFloat(field === 'qty' ? value : item.qty) || 0;
+          const r = parseFloat(field === 'rate' ? value : item.rate) || 0;
+          updatedItem.total = q * r;
+        }
+        return updatedItem;
+      }
+      return item;
+    });
+    setNewCustItems(updated);
+  };
+
+  const handleAddRow = () => {
+    setNewCustItems([...newCustItems, { productName: '', qty: 1, unit: 'Sheets', rate: 0, total: 0, status: 'Pending', category: 'Material' }]);
+  };
+
+  const handleDeleteRow = (index) => {
+    const updated = newCustItems.filter((_, i) => i !== index);
+    setNewCustItems(updated.length > 0 ? updated : [{ productName: '', qty: 1, unit: 'Sheets', rate: 0, total: 0, status: 'Pending', category: 'Material' }]);
+  };
+
+  const handleDuplicateRow = (index) => {
+    const original = newCustItems[index];
+    setNewCustItems([
+      ...newCustItems,
+      { ...original, productName: original.productName ? original.productName + ' (Copy)' : '' }
+    ]);
+  };
+
+  const handleMockUpload = () => {
+    const mockFiles = [
+      { name: 'laminate_sample_finish.png', size: '1.2 MB', type: 'Site Image' },
+      { name: 'invoice_pre_quote.pdf', size: '820 KB', type: 'Invoice' },
+      { name: 'structural_cad_drawings.dwg', size: '12.4 MB', type: 'Blueprint' },
+      { name: 'customer_site_agreement.pdf', size: '1.4 MB', type: 'Document' }
+    ];
+    const randomFile = mockFiles[Math.floor(Math.random() * mockFiles.length)];
+    setUploads([...uploads, { ...randomFile, time: 'Just now' }]);
+  };
+
+  const handleRemoveUpload = (idx) => {
+    setUploads(uploads.filter((_, i) => i !== idx));
+  };
+
+  // --- TIME PARSING HELPERS ---
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // --- DATA FILTERING ---
+  const filteredCustomers = customers.filter(c => {
+    const matchesSearch =
+      c.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.phone.includes(searchTerm) ||
+      c.requirement.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.address.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStage = selectedStage === 'All' || c.stage === selectedStage;
+    const matchesStaff = selectedStaff === 'All' || c.assignedStaff === selectedStaff;
+    const matchesPriority = selectedPriority === 'All' || c.priority === selectedPriority;
+
+    return matchesSearch && matchesStage && matchesStaff && matchesPriority;
+  });
+
+  // --- AGGREGATE CALCULATIONS ---
+  const totalCustomersCount = customers.length;
+  const todayReminders = reminders.filter(r => r.status !== 'Completed' && r.reminderDate.split('T')[0] === todayStr);
+  const pendingRemindersCount = reminders.filter(r => r.status === 'Pending' || r.status === 'Snoozed').length;
+  const completedDeals = customers.filter(c => c.stage === 'Confirmed' || c.stage === 'Completed').length;
+  const totalSalesVal = customers.reduce((sum, c) => sum + (c.amount || 0), 0);
+  const pendingPaymentsCount = customers.filter(c => c.pendingAmount > 0).length;
+
+  // --- ALERTS ---
+  const overdueFollowups = reminders.filter(r => r.status !== 'Completed' && r.reminderDate.split('T')[0] < todayStr);
+  const upcomingFollowups = reminders.filter(r => {
+    if (r.status === 'Completed') return false;
+    const remDate = r.reminderDate.split('T')[0];
+    const diffTime = new Date(remDate) - new Date(todayStr);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 && diffDays <= 3;
+  });
+  const pendingPaymentAlerts = customers.filter(c => c.pendingAmount > 0 && (c.stage === 'Confirmed' || c.stage === 'Completed'));
+
+  // --- FORM HANDLERS ---
+  const handleCreateCustomer = (e) => {
+    if (e) e.preventDefault();
+    if (!newCustName.trim()) return;
+
+    const activeItems = newCustItems.filter(item => item.productName.trim() !== '');
+
+    addCustomer({
+      customerName: newCustName,
+      phone: newCustPhone,
+      address: newCustAddress,
+      requirement: activeItems.map(item => `${item.productName} (${item.qty} ${item.unit} @ ₹${item.rate})`).join(', ') || 'Standard supplies',
+      projectType: newCustProjType,
+      stage: newCustStage,
+      assignedStaff: newCustStaff,
+      priority: newCustPriority,
+      items: activeItems,
+      subtotal: subtotal,
+      discount: discountVal,
+      taxPercent: taxPercentVal,
+      taxAmount: taxAmount,
+      amount: grandTotal,
+      advancePaid: advancePaidVal,
+      paymentMode: newCustPayMode,
+      followupDate: newCustFollowupDate
+    });
+
+    // Reset Form
+    setNewCustName('');
+    setNewCustPhone('');
+    setNewCustAddress('');
+    setNewCustDeliveryNotes('');
+    setNewCustItems([{ productName: '', qty: 1, unit: 'Sheets', rate: 0, total: 0, status: 'Pending', category: 'Material' }]);
+    setNewCustDiscount('');
+    setNewCustTaxPercent('18');
+    setNewCustProjType('Hardware');
+    setNewCustStage('New Lead');
+    setNewCustStaff('Suresh');
+    setNewCustPriority('Medium');
+    setNewCustAdvance('');
+    setNewCustPayMode('Cash');
+    setNewCustFollowupDate('');
+    setCreateWorkspaceNote('');
+    
+    setIsAddModalOpen(false);
+  };
+
+  const handleQuickNoteSubmit = (e) => {
+    e.preventDefault();
+    if (!quickNoteText.trim() || !selectedCustId) return;
+    addCustomerNote(selectedCustId, quickNoteText);
+    setQuickNoteText('');
+    setIsQuickNoteOpen(false);
+  };
+
+  const handleQuickReminderSubmit = (e) => {
+    e.preventDefault();
+    if (!quickReminderDate || !selectedCustId) return;
+    createReminder(selectedCustId, quickReminderType, quickReminderDate, quickReminderNotes);
+    setQuickReminderDate('');
+    setQuickReminderNotes('');
+    setIsQuickReminderOpen(false);
+  };
+
+  const handleExportAllPDF = (action = 'download') => {
+    generateAllCustomersPDF(customers, payments, stages, action);
+    logPdfGeneration('ALL', 'All Customer Report');
+  };
+
+  const handleExportSingleInvoice = (customer) => {
+    const custPayments = payments.filter(p => p.customerId === customer.id);
+    generateInvoicePDF(customer, custPayments);
+    logPdfGeneration(customer.id, 'Single Customer Invoice');
+  };
+
+  // --- FULL-PAGE REDESIGNED ERP CREATE VIEW WORKSPACE ---
+  if (isAddModalOpen) {
+    // Dynamic Donut Path calculations
+    let cumulativePercent = 0;
+    const donutCategories = [
+      { label: 'Material', value: catSubtotals.Material, color: '#F97316' },
+      { label: 'Installation', value: catSubtotals.Installation, color: '#F59E0B' },
+      { label: 'Automation', value: catSubtotals.Automation, color: '#3B82F6' },
+      { label: 'Labor', value: catSubtotals.Labor, color: '#A855F7' },
+      { label: 'Miscellaneous', value: catSubtotals.Miscellaneous, color: '#14B8A6' }
+    ].filter(c => c.value > 0);
+
+    const donutCircles = donutCategories.map((cat, idx) => {
+      const percent = Math.round((cat.value / totalCatVal) * 100);
+      const strokeDashArray = `${percent} ${100 - percent}`;
+      const strokeDashOffset = 100 - cumulativePercent + 25; // +25 to rotate starting point to top
+      cumulativePercent += percent;
+      return (
+        <circle
+          key={idx}
+          cx="20"
+          cy="20"
+          r="15.9155"
+          fill="transparent"
+          stroke={cat.color}
+          strokeWidth="3.5"
+          strokeDasharray={strokeDashArray}
+          strokeDashoffset={strokeDashOffset}
+          style={{ transition: 'stroke-dasharray 0.3s ease, stroke-dashoffset 0.3s ease' }}
+        />
+      );
+    });
+
+    const paymentProgressBarPercent = grandTotal > 0 ? Math.min(100, Math.round((advancePaidVal / grandTotal) * 100)) : 0;
+
+    return (
+      <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
+        
+        {/* Custom Styles Injection */}
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .erp-container {
+            display: grid;
+            grid-template-columns: 1.8fr 1.2fr;
+            gap: 22px;
+            align-items: start;
+            margin-top: 18px;
+          }
+          @media (max-width: 991px) {
+            .erp-container { grid-template-columns: 1.4fr 1.2fr; gap: 16px; }
+          }
+          @media (max-width: 768px) {
+            .erp-container { grid-template-columns: 1fr; gap: 20px; }
+          }
+          .erp-card {
+            background: rgba(21, 31, 50, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+            transition: border-color 0.25s ease;
+          }
+          .erp-card:hover { border-color: rgba(255, 255, 255, 0.06); }
+          .erp-card-title {
+            font-family: var(--font-display);
+            font-size: 13.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-white);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+          .erp-table-wrapper {
+            overflow-x: auto;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 12px;
+          }
+          .erp-table { width: 100%; border-collapse: collapse; text-align: left; }
+          .erp-table th {
+            background: rgba(16, 23, 38, 0.4);
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+          }
+          .erp-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            vertical-align: middle;
+          }
+          .erp-table tr:hover { background: rgba(255, 255, 255, 0.01); }
+          .erp-input-inline {
+            width: 100%;
+            background: rgba(16, 23, 38, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-white);
+            padding: 5px 8px;
+            font-size: 12px;
+            border-radius: 6px;
+            outline: none;
+            transition: all 0.2s ease;
+          }
+          .erp-input-inline:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 6px rgba(249, 115, 22, 0.15);
+          }
+          .upload-zone {
+            border: 1.5px dashed rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            background: rgba(16, 23, 38, 0.2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+          .upload-zone:hover {
+            border-color: var(--accent);
+            background: rgba(249, 115, 22, 0.02);
+          }
+        `}} />
+
+        {/* 1. Header Section */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '14px', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0, background: 'var(--bg-main)', zIndex: 10 }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', fontFamily: 'var(--font-display)', color: 'var(--text-white)', letterSpacing: '-0.5px' }}>
+              Create New Client File
+            </h2>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Manage customer projects, materials, billing, and follow-ups
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="button" className="btn btn-secondary" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '500' }} onClick={() => setIsAddModalOpen(false)}>
+              Save Draft
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{
+                background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)',
+                border: 'none',
+                boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
+                fontWeight: '700',
+                fontSize: '12.5px',
+                padding: '7px 16px',
+                borderRadius: '8px'
+              }}
+              onClick={handleCreateCustomer}
+            >
+              Create File
+            </button>
+          </div>
+        </div>
+
+        {/* 2. Main Page Layout Grid */}
+        <div className="erp-container">
+          
+          {/* Left Column (65% width) */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            
+            {/* Card 1: Client Information */}
+            <div className="erp-card">
+              <div className="erp-card-title">Client Profile Details</div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label className="ag-form-label">Customer / Business Name *</label>
+                  <input
+                    type="text"
+                    className="erp-input-inline"
+                    style={{ padding: '8px 12px', fontSize: '13px' }}
+                    placeholder="e.g. Hakkim Hardware, Lalgudi"
+                    value={newCustName}
+                    onChange={e => setNewCustName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="ag-form-label">Phone / Mobile</label>
+                  <input
+                    type="tel"
+                    className="erp-input-inline"
+                    style={{ padding: '8px 12px', fontSize: '13px' }}
+                    placeholder="10-digit number"
+                    value={newCustPhone}
+                    onChange={e => setNewCustPhone(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="ag-form-label">Deal Priority</label>
+                  <select className="erp-input-inline" style={{ padding: '8px 12px', fontSize: '13px', height: '36px' }} value={newCustPriority} onChange={e => setNewCustPriority(e.target.value)}>
+                    <option value="High">🔴 High Priority</option>
+                    <option value="Medium">🟡 Medium Priority</option>
+                    <option value="Low">🟢 Low Priority</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="ag-form-label">Project / Deal Type</label>
+                  <select className="erp-input-inline" style={{ padding: '8px 12px', fontSize: '13px', height: '36px' }} value={newCustProjType} onChange={e => setNewCustProjType(e.target.value)}>
+                    <option value="Hardware">Hardware Supplies</option>
+                    <option value="Plywood">Plywood & Boarding</option>
+                    <option value="Laminate">Laminates & Veneers</option>
+                    <option value="Interior design">Interior Fit-out</option>
+                    <option value="Contractor Work">Contractor Billing</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="ag-form-label">Sales Stage</label>
+                  <select className="erp-input-inline" style={{ padding: '8px 12px', fontSize: '13px', height: '36px' }} value={newCustStage} onChange={e => setNewCustStage(e.target.value)}>
+                    {stages.map(s => (
+                      <option key={s.stageName} value={s.stageName}>{s.stageName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Project Materials Table */}
+            <div className="erp-card">
+              <div className="erp-card-title">
+                <span>Project Materials</span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)',
+                    border: 'none',
+                    fontWeight: '700',
+                    fontSize: '11px',
+                    padding: '5px 12px',
+                    color: 'var(--text-white)'
+                  }}
+                  onClick={handleAddRow}
+                >
+                  + Add Item
+                </button>
+              </div>
+
+              <div className="erp-table-wrapper">
+                <table className="erp-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '4%' }}>S.No</th>
+                      <th style={{ width: '38%' }}>Product Name</th>
+                      <th style={{ width: '18%' }}>Category</th>
+                      <th style={{ width: '10%' }}>Qty</th>
+                      <th style={{ width: '10%' }}>Unit</th>
+                      <th style={{ width: '12%' }}>Rate (₹)</th>
+                      <th style={{ width: '12%' }}>Status</th>
+                      <th style={{ width: '14%', textAlign: 'right' }}>Total (₹)</th>
+                      <th style={{ width: '10%', textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {newCustItems.map((item, idx) => (
+                      <tr key={idx}>
+                        <td style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>{idx + 1}</td>
+                        <td>
+                          <input
+                            type="text"
+                            className="erp-input-inline"
+                            placeholder="Type product name..."
+                            list="common-products"
+                            value={item.productName}
+                            onChange={e => handleItemChange(idx, 'productName', e.target.value)}
+                            required
+                          />
+                        </td>
+                        <td>
+                          <select className="erp-input-inline" style={{ padding: '4px 6px' }} value={item.category || 'Material'} onChange={e => handleItemChange(idx, 'category', e.target.value)}>
+                            <option value="Material">Material</option>
+                            <option value="Installation">Installation</option>
+                            <option value="Automation">Automation</option>
+                            <option value="Labor">Labor</option>
+                            <option value="Miscellaneous">Misc</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            className="erp-input-inline"
+                            style={{ textAlign: 'center' }}
+                            min="0.01"
+                            step="any"
+                            value={item.qty}
+                            onChange={e => handleItemChange(idx, 'qty', e.target.value)}
+                            required
+                          />
+                        </td>
+                        <td>
+                          <select className="erp-input-inline" style={{ padding: '4px' }} value={item.unit} onChange={e => handleItemChange(idx, 'unit', e.target.value)}>
+                            <option value="Sheets">Sheets</option>
+                            <option value="Sets">Sets</option>
+                            <option value="Pcs">Pcs</option>
+                            <option value="Boxes">Boxes</option>
+                            <option value="Kgs">Kgs</option>
+                            <option value="Rft">Rft</option>
+                            <option value="Lot">Lot</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            className="erp-input-inline"
+                            style={{ textAlign: 'right' }}
+                            min="0"
+                            step="any"
+                            value={item.rate}
+                            onChange={e => handleItemChange(idx, 'rate', e.target.value)}
+                            required
+                          />
+                        </td>
+                        <td>
+                          <select className="erp-input-inline" style={{ padding: '4px' }} value={item.status || 'Pending'} onChange={e => handleItemChange(idx, 'status', e.target.value)}>
+                            <option value="Pending">Pending</option>
+                            <option value="Ordered">Ordered</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Installed">Installed</option>
+                          </select>
+                        </td>
+                        <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: '700', color: 'var(--text-white)' }}>
+                          ₹{(parseFloat(item.total) || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                            <button
+                              type="button"
+                              className="action-btn-circle accent"
+                              style={{ width: '22px', height: '22px', fontSize: '9px' }}
+                              onClick={() => handleDuplicateRow(idx)}
+                              title="Duplicate row"
+                            >
+                              📋
+                            </button>
+                            <button
+                              type="button"
+                              className="action-btn-circle"
+                              style={{ width: '22px', height: '22px', fontSize: '11px', color: 'var(--status-red)', borderColor: 'rgba(239, 68, 68, 0.15)' }}
+                              onClick={() => handleDeleteRow(idx)}
+                              title="Delete row"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <datalist id="common-products">
+                {COMMON_PRODUCTS.map((prod, pidx) => (
+                  <option key={pidx} value={prod} />
+                ))}
+              </datalist>
+
+              {/* Table Footer Details */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '20px', padding: '10px 10px 0 0', borderTop: '1px solid rgba(255,255,255,0.02)' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Total Items: <strong style={{ color: 'var(--text-white)' }}>{newCustItems.length}</strong>
+                </span>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Combined Subtotal: <strong style={{ color: 'var(--accent)' }}>₹{subtotal.toLocaleString('en-IN')}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Card 3: Site & Delivery Details */}
+            <div className="erp-card">
+              <div className="erp-card-title">Site & Delivery Details</div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label className="ag-form-label">
+                    Site Address
+                  </label>
+                  <textarea
+                    className="erp-input-inline"
+                    rows={2}
+                    style={{ resize: 'vertical', padding: '8px 12px' }}
+                    placeholder="Physical delivery / construction site coordinates..."
+                    value={newCustAddress}
+                    onChange={e => setNewCustAddress(e.target.value)}
+                  />
+                </div>
+                
+                <div>
+                  <label className="ag-form-label">Delivery Notes / Delivery Date</label>
+                  <input
+                    type="date"
+                    className="erp-input-inline"
+                    value={newCustFollowupDate}
+                    onChange={e => setNewCustFollowupDate(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="ag-form-label">Delivery Instructions</label>
+                  <input
+                    type="text"
+                    className="erp-input-inline"
+                    placeholder="e.g. Leave with supervisor, call before shipping..."
+                    value={newCustDeliveryNotes}
+                    onChange={e => setNewCustDeliveryNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Notes & File Uploads */}
+            <div className="erp-card">
+              <div className="erp-card-title">Notes & File Uploads</div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '18px' }}>
+                {/* Internal notes */}
+                <div>
+                  <label className="ag-form-label">Internal Executive Notes</label>
+                  <textarea
+                    className="erp-input-inline"
+                    rows={6}
+                    style={{ resize: 'none', padding: '8px 12px' }}
+                    placeholder="Discussed requirements, customer requested Marine Grade Plywood and anti-rust hinges. Follow up when stock arrives..."
+                    value={createWorkspaceNote}
+                    onChange={e => setCreateWorkspaceNote(e.target.value)}
+                  />
+                </div>
+
+                {/* File Upload details */}
+                <div>
+                  <label className="ag-form-label">Blueprint & Layout Attachments</label>
+                  <div className="upload-zone" onClick={handleMockUpload}>
+                    <span style={{ fontSize: '22px', display: 'block', marginBottom: '4px' }}>📂</span>
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-white)' }}>Drag & drop files here</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>or click to simulate cloud upload</span>
+                  </div>
+
+                  {/* Uploads checklist */}
+                  {uploads.length > 0 && (
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {uploads.map((file, fidx) => (
+                        <div key={fidx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16, 23, 38, 0.3)', padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '13px' }}>{file.type === 'Blueprint' ? '📐' : '🖼️'}</span>
+                            <div>
+                              <span style={{ fontSize: '11.5px', color: 'var(--text-white)', fontWeight: '500', display: 'block' }}>{file.name}</span>
+                              <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{file.size} • {file.time}</span>
+                            </div>
+                          </div>
+                          <button type="button" onClick={() => handleRemoveUpload(fidx)} style={{ background: 'transparent', border: 'none', color: 'var(--status-red)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}>
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Right Sidebar Column (Sticky, 35% width) */}
+          <div style={{ position: 'sticky', top: '70px', display: 'flex', flexDirection: 'column' }}>
+            
+            {/* Sidebar Card 1: Billing Summary Card */}
+            <div className="erp-card" style={{ background: 'linear-gradient(to bottom, rgba(21, 31, 50, 0.6) 0%, rgba(21, 31, 50, 0.4) 100%)', border: '1px solid rgba(249, 115, 22, 0.08)' }}>
+              <div className="erp-card-title" style={{ color: 'var(--accent)' }}>Billing Workspace & Financials</div>
+              
+              {/* SVG Cost Split Ring & Legend */}
+              <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '18px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                <div style={{ width: '70px', height: '70px', position: 'relative', flexShrink: 0 }}>
+                  <svg viewBox="0 0 40 40" width="100%" height="100%">
+                    <circle cx="20" cy="20" r="15.9155" fill="transparent" stroke="rgba(255,255,255,0.03)" strokeWidth="3.5" />
+                    {totalCatVal === 0 ? (
+                      <circle cx="20" cy="20" r="15.9155" fill="transparent" stroke="#334155" strokeWidth="3.5" />
+                    ) : donutCircles}
+                  </svg>
+                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '9px', fontWeight: 'bold', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    BUDGET<br/>SPLIT
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                  {categories.map((cat, idx) => {
+                    const val = catSubtotals[cat.label] || 0;
+                    if (val === 0) return null;
+                    const pct = totalCatVal > 0 ? Math.round((val / totalCatVal) * 100) : 0;
+                    return (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: cat.color }} />
+                          <span style={{ color: 'var(--text-muted)' }}>{cat.label}</span>
+                        </div>
+                        <span style={{ fontWeight: '700', color: 'var(--text-white)' }}>{pct}% (₹{val.toLocaleString('en-IN')})</span>
+                      </div>
+                    );
+                  })}
+                  {totalCatVal === 0 && (
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Configure items to view category splits</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Financial Inputs & Summary */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                
+                {/* Subtotal Display */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Materials Subtotal:</span>
+                  <span style={{ color: 'var(--text-white)', fontWeight: 'bold' }}>₹{subtotal.toLocaleString('en-IN')}</span>
+                </div>
+
+                {/* GST selection */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>GST Tax Rate:</span>
+                  <select className="erp-input-inline" style={{ width: '100px', padding: '3px 6px', height: '28px' }} value={newCustTaxPercent} onChange={e => setNewCustTaxPercent(e.target.value)}>
+                    <option value="0">0% GST</option>
+                    <option value="5">5% GST</option>
+                    <option value="12">12% GST</option>
+                    <option value="18">18% GST (Std)</option>
+                    <option value="28">28% GST</option>
+                  </select>
+                </div>
+
+                {/* Discount */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Discount (Flat ₹):</span>
+                  <input
+                    type="number"
+                    className="erp-input-inline"
+                    style={{ width: '100px', textAlign: 'right', padding: '3px 6px' }}
+                    placeholder="0"
+                    value={newCustDiscount}
+                    onChange={e => setNewCustDiscount(e.target.value)}
+                  />
+                </div>
+
+                {/* Advance Paid */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Advance Collected:</span>
+                  <input
+                    type="number"
+                    className="erp-input-inline"
+                    style={{ width: '100px', textAlign: 'right', padding: '3px 6px' }}
+                    placeholder="0"
+                    value={newCustAdvance}
+                    onChange={e => setNewCustAdvance(e.target.value)}
+                  />
+                </div>
+
+                {/* Advance Mode */}
+                {advancePaidVal > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Advance Mode:</span>
+                    <select className="erp-input-inline" style={{ width: '120px', padding: '3px 6px', height: '28px' }} value={newCustPayMode} onChange={e => setNewCustPayMode(e.target.value)}>
+                      <option value="Cash">Cash Mode</option>
+                      <option value="GPay">GPay / UPI</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="Cheque">Cheque Clear</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Final Bill Section */}
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                  
+                  {/* Progress Bar advance vs grand total */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                      <span>Advance Funding Progress:</span>
+                      <span style={{ color: 'var(--status-green)', fontWeight: 'bold' }}>{paymentProgressBarPercent}%</span>
+                    </div>
+                    <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.03)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${paymentProgressBarPercent}%`, height: '100%', background: 'var(--status-green)', borderRadius: '3px', transition: 'width 0.3s ease' }} />
+                    </div>
+                  </div>
+
+                  <div className="ag-billing-banner-orange" style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.05)', border: '1px solid rgba(249, 115, 22, 0.15)', borderRadius: '8px' }}>
+                    <span style={{ display: 'block', fontSize: '8.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Grand Final Bill</span>
+                    <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--status-green)', display: 'block', marginTop: '2px', fontFamily: 'var(--font-display)' }}>
+                      ₹{grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </span>
+                    <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+                      (₹{subtotal.toLocaleString('en-IN')} subtotal - ₹{discountVal.toLocaleString('en-IN')} discount + ₹{taxAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })} GST)
+                    </span>
+                  </div>
+
+                  <div style={{ marginTop: '10px' }}>
+                    <span style={{ display: 'block', fontSize: '8.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Outstanding Pending Balance</span>
+                    <span style={{ fontSize: '18px', fontWeight: '800', color: pendingBalance > 0 ? 'var(--status-red)' : 'var(--status-green)', display: 'block', marginTop: '2px', fontFamily: 'var(--font-display)' }}>
+                      ₹{pendingBalance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Sidebar Card 2: Follow-up & Staff Card */}
+            <div className="erp-card">
+              <div className="erp-card-title">Follow-up & Executive Staff</div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div>
+                  <label className="ag-form-label">Assigned Executive</label>
+                  <select className="erp-input-inline" style={{ height: '32px' }} value={newCustStaff} onChange={e => setNewCustStaff(e.target.value)}>
+                    {staffList.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="ag-form-label">Follow-up Due Date</label>
+                  <input
+                    type="date"
+                    className="erp-input-inline"
+                    value={newCustFollowupDate}
+                    onChange={e => setNewCustFollowupDate(e.target.value)}
+                  />
+                </div>
+
+                {/* Instant Actions */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <button type="button" className="btn btn-secondary" style={{ flex: 1, padding: '6px', fontSize: '11px', gap: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span>📞</span> Instant Call
+                  </button>
+                  <button type="button" className="btn btn-secondary" style={{ flex: 1, padding: '6px', fontSize: '11px', gap: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span>💬</span> WhatsApp
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar Card 3: Quick Stats Card */}
+            <div className="erp-card">
+              <div className="erp-card-title">Executive Analytics</div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ background: 'rgba(16, 23, 38, 0.25)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Total Materials</span>
+                  <span style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-white)', display: 'block', marginTop: '2px' }}>{totalMaterialsCount}</span>
+                </div>
+                <div style={{ background: 'rgba(16, 23, 38, 0.25)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Total Quantity</span>
+                  <span style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-white)', display: 'block', marginTop: '2px' }}>{totalQtySum}</span>
+                </div>
+                <div style={{ background: 'rgba(16, 23, 38, 0.25)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Pending Items</span>
+                  <span style={{ fontSize: '16px', fontWeight: '800', color: 'var(--status-yellow)', display: 'block', marginTop: '2px' }}>{pendingItemsCount}</span>
+                </div>
+                <div style={{ background: 'rgba(16, 23, 38, 0.25)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Payment status</span>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    color: derivedPaymentStatus === 'Paid' ? 'var(--status-green)' : derivedPaymentStatus === 'Partial' ? 'var(--status-yellow)' : 'var(--status-red)',
+                    display: 'block',
+                    marginTop: '6px',
+                    textTransform: 'uppercase'
+                  }}>{derivedPaymentStatus}</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Page Title & Download Buttons */}
+      <div class="page-header">
+        <div class="page-title-group">
+          <h2>Overview Dashboard</h2>
+          <p>Real-time client tracking and collection summary metrics</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button class="btn btn-secondary" onClick={() => handleExportAllPDF('download')} title="Download Master Portfolio PDF">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              Export Portfolio
+            </button>
+            <button class="btn btn-secondary btn-circle" style={{ width: '42px', height: '42px', borderRadius: '50%', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleExportAllPDF('print')} title="View / Print Portfolio PDF">
+              🖨️
+            </button>
+          </div>
+          <button class="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add Customer
+          </button>
+        </div>
+      </div>
+
+      {/* TOP SUMMARY METRICS CARDS */}
+      <div class="metrics-grid">
+        <div class="metric-card primary">
+          <div class="metric-icon-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <div class="metric-label">TOTAL CUSTOMERS</div>
+          <div class="metric-val">{totalCustomersCount}</div>
+        </div>
+
+        <div class="metric-card red">
+          <div class="metric-icon-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <div class="metric-label">TODAY FOLLOW-UPS</div>
+          <div class="metric-val">{todayReminders.length}</div>
+        </div>
+
+        <div class="metric-card yellow">
+          <div class="metric-icon-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div class="metric-label">PENDING FOLLOW-UPS</div>
+          <div class="metric-val">{pendingRemindersCount}</div>
+        </div>
+
+        <div class="metric-card green">
+          <div class="metric-icon-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <div class="metric-label">COMPLETED DEALS</div>
+          <div class="metric-val">{completedDeals}</div>
+        </div>
+
+        <div class="metric-card primary">
+          <div class="metric-icon-box">
+            <span style={{ fontSize: '18px', fontWeight: 'bold' }}>₹</span>
+          </div>
+          <div class="metric-label">TOTAL SALES VALUE</div>
+          <div class="metric-val">₹{totalSalesVal >= 1000 ? (totalSalesVal / 1000).toFixed(1) + 'K' : totalSalesVal}</div>
+        </div>
+
+        <div class="metric-card red">
+          <div class="metric-icon-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div class="metric-label">PENDING PAYMENTS</div>
+          <div class="metric-val">{pendingPaymentsCount}</div>
+        </div>
+      </div>
+
+      {/* WARNINGS & ALERTS SECTION */}
+      <div class="alerts-container">
+        {/* Overdue Followup panel */}
+        <div class="alert-panel danger">
+          <div class="alert-panel-title" style={{ color: 'var(--status-red)' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            Overdue Follow-ups ({overdueFollowups.length})
+          </div>
+          <div class="alert-item-list">
+            {overdueFollowups.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '10px' }}>No overdue follow-ups!</div>
+            ) : (
+              overdueFollowups.map(r => {
+                const c = customers.find(x => x.id === r.customerId) || {};
+                return (
+                  <div class="alert-item" key={r.id} onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
+                    <span class="alert-item-text">{c.customerName || 'Unknown'}</span>
+                    <span class="alert-item-time" style={{ color: 'var(--status-red)', fontWeight: '600' }}>
+                      {r.reminderDate.split('T')[0]}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Upcoming followups */}
+        <div class="alert-panel warning">
+          <div class="alert-panel-title" style={{ color: 'var(--status-yellow)' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Upcoming Reminders (3 Days) ({upcomingFollowups.length})
+          </div>
+          <div class="alert-item-list">
+            {upcomingFollowups.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '10px' }}>No upcoming reminders.</div>
+            ) : (
+              upcomingFollowups.map(r => {
+                const c = customers.find(x => x.id === r.customerId) || {};
+                return (
+                  <div class="alert-item" key={r.id} onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
+                    <span class="alert-item-text">{c.customerName || 'Unknown'}</span>
+                    <span class="alert-item-time" style={{ color: 'var(--status-yellow)' }}>
+                      {r.reminderDate.split('T')[0]}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Pending payments alerts */}
+        <div class="alert-panel info">
+          <div class="alert-panel-title" style={{ color: 'var(--status-blue)' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+              <line x1="12" y1="4" x2="12" y2="20"></line>
+            </svg>
+            Pending Payments Collection ({pendingPaymentAlerts.length})
+          </div>
+          <div class="alert-item-list">
+            {pendingPaymentAlerts.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '10px' }}>All collections cleared!</div>
+            ) : (
+              pendingPaymentAlerts.map(c => (
+                <div class="alert-item" key={c.id} onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
+                  <span class="alert-item-text">{c.customerName}</span>
+                  <span class="alert-item-time" style={{ color: 'var(--status-red)', fontWeight: '600' }}>
+                    ₹{c.pendingAmount} due
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* DYNAMIC FILTER BAR */}
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>Search Client</label>
+            <div class="search-input-wrapper">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="text"
+                class="form-input form-input-search"
+                placeholder="Search customers, phone..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label>Pipeline Stage</label>
+            <select class="form-input" value={selectedStage} onChange={e => setSelectedStage(e.target.value)}>
+              <option value="All">All Stages</option>
+              {stages.map(s => (
+                <option key={s.stageName} value={s.stageName}>{s.stageName}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Assigned Staff</label>
+            <select class="form-input" value={selectedStaff} onChange={e => setSelectedStaff(e.target.value)}>
+              <option value="All">All Staff</option>
+              {staffList.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Priority</label>
+            <select class="form-input" value={selectedPriority} onChange={e => setSelectedPriority(e.target.value)}>
+              <option value="All">All Priorities</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* CLIENTS DIRECTORY - TABLE VIEW */}
+      <div class="table-container">
+        {filteredCustomers.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            No clients match the specified filter criteria.
+          </div>
+        ) : (
+          <table class="crm-table">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Requirement</th>
+                <th>Stage</th>
+                <th>Assigned</th>
+                <th>Payment</th>
+                <th>Follow-Up</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCustomers.map(c => {
+                return (
+                  <tr key={c.id}>
+                    {/* Customer Info */}
+                    <td data-label="Customer" onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
+                      <div class="customer-cell">
+                        <span class="name">{c.customerName}</span>
+                        <span class="phone">{c.phone}</span>
+                      </div>
+                    </td>
+
+                    {/* Requirement details */}
+                    <td data-label="Requirement">
+                      <div style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.requirement || '—'}
+                      </div>
+                    </td>
+
+                    {/* Current Stage */}
+                    <td data-label="Stage">
+                      <span
+                        class="badge"
+                        style={{
+                          backgroundColor: `${stages.find(s => s.stageName === c.stage)?.stageColor || '#3B82F6'}18`,
+                          color: stages.find(s => s.stageName === c.stage)?.stageColor || '#3B82F6',
+                          border: `1px solid ${stages.find(s => s.stageName === c.stage)?.stageColor}40`
+                        }}
+                      >
+                        {c.stage}
+                      </span>
+                    </td>
+
+                    {/* Assigned Representative */}
+                    <td data-label="Assigned">
+                      <span style={{ fontWeight: '500' }}>{c.assignedStaff || 'Unassigned'}</span>
+                    </td>
+
+                    {/* Payment Status Badges */}
+                    <td data-label="Payment">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <span class={`badge badge-payment-${c.paymentStatus.toLowerCase()}`}>
+                          {c.paymentStatus}
+                        </span>
+                        {c.pendingAmount > 0 && (
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                            Bal: ₹{c.pendingAmount}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Next Followup Date */}
+                    <td data-label="Follow-Up">
+                      {c.followupDate ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style={{ color: 'var(--accent)' }}>
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                          </svg>
+                          <span class={c.followupDate < todayStr ? 'overdue' : ''} style={{ color: c.followupDate < todayStr ? 'var(--status-red)' : 'inherit', fontWeight: c.followupDate < todayStr ? '600' : 'normal' }}>
+                            {c.followupDate}
+                          </span>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
+                      )}
+                    </td>
+
+                    {/* Actions cell */}
+                    <td data-label="Actions">
+                      <div class="action-cell">
+                        {/* Call */}
+                        {c.phone && (
+                          <a href={`tel:${c.phone}`} class="action-btn-circle call" title="Call Customer">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.1-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                            </svg>
+                          </a>
+                        )}
+                        
+                        {/* WhatsApp */}
+                        {c.phone && (
+                          <a
+                            href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName)},%20this%20is%20regarding%20your%20requirement%20for%20${encodeURIComponent(c.requirement)}.`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="action-btn-circle whatsapp"
+                            title="WhatsApp Message"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                            </svg>
+                          </a>
+                        )}
+
+                        {/* Move stage shortcut */}
+                        <button
+                          class="action-btn-circle accent"
+                          title="Quick Move Stage"
+                          onClick={() => {
+                            setSelectedCustId(c.id);
+                            setIsQuickMoveOpen(true);
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                          </svg>
+                        </button>
+
+                        {/* Quick Note shortcut */}
+                        <button
+                          class="action-btn-circle"
+                          title="Quick Add Note"
+                          onClick={() => {
+                            setSelectedCustId(c.id);
+                            setIsQuickNoteOpen(true);
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                          </svg>
+                        </button>
+
+                        {/* Quick Reminder shortcut */}
+                        <button
+                          class="action-btn-circle"
+                          title="Schedule Follow-up"
+                          onClick={() => {
+                            setSelectedCustId(c.id);
+                            setIsQuickReminderOpen(true);
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                          </svg>
+                        </button>
+
+                        {/* Generate invoice direct */}
+                        <button
+                          class="action-btn-circle"
+                          title="Download Invoice/Receipt"
+                          onClick={() => handleExportSingleInvoice(c)}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* --- POPUPS & MODALS OVERLAYS --- */}
+
+      {/* MODAL 2: QUICK MOVE PIPELINE STAGE */}
+      {isQuickMoveOpen && selectedCustId && (
+        <div class="modal-overlay">
+          <div class="modal-content" style={{ borderRadius: '12px' }}>
+            <div class="modal-header">
+              <h3 style={{ fontSize: '15px' }}>Move Deal Stage</h3>
+              <button class="modal-close-btn" onClick={() => setIsQuickMoveOpen(false)}>&times;</button>
+            </div>
+            <div class="modal-body">
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                Select the next sales stage for <strong>{customers.find(x => x.id === selectedCustId)?.customerName}</strong>.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {stages.map(stg => (
+                  <button
+                    key={stg.stageName}
+                    class="btn btn-secondary"
+                    style={{
+                      justifyContent: 'flex-start',
+                      borderColor: customers.find(x => x.id === selectedCustId)?.stage === stg.stageName ? 'var(--accent)' : 'var(--border-color)',
+                      backgroundColor: customers.find(x => x.id === selectedCustId)?.stage === stg.stageName ? 'var(--accent-glow)' : 'var(--bg-card)'
+                    }}
+                    onClick={() => {
+                      updateCustomerStage(selectedCustId, stg.stageName);
+                      setIsQuickMoveOpen(false);
+                      setSelectedCustId(null);
+                    }}
+                  >
+                    <span class="stage-color-dot" style={{ backgroundColor: stg.stageColor, marginRight: '8px' }}></span>
+                    {stg.stageName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: QUICK ADD NOTE */}
+      {isQuickNoteOpen && selectedCustId && (
+        <div class="modal-overlay">
+          <div class="modal-content" style={{ borderRadius: '12px' }}>
+            <div class="modal-header">
+              <h3 style={{ fontSize: '15px' }}>Add Note to Client File</h3>
+              <button class="modal-close-btn" onClick={() => setIsQuickNoteOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleQuickNoteSubmit}>
+              <div class="modal-body">
+                <p style={{ fontSize: '13px', marginBottom: '10px' }}>
+                  Logging note for: <strong>{customers.find(x => x.id === selectedCustId)?.customerName}</strong>
+                </p>
+                <textarea
+                  class="textarea-input"
+                  placeholder="e.g. Discussed plywood sizes, customer requested price list..."
+                  value={quickNoteText}
+                  onChange={e => setQuickNoteText(e.target.value)}
+                  required
+                  autoFocus
+                ></textarea>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onClick={() => setIsQuickNoteOpen(false)}>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Note</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: QUICK SCHEDULE REMINDER */}
+      {isQuickReminderOpen && selectedCustId && (
+        <div class="modal-overlay">
+          <div class="modal-content" style={{ borderRadius: '12px' }}>
+            <div class="modal-header">
+              <h3 style={{ fontSize: '15px' }}>Schedule Follow-Up Reminder</h3>
+              <button class="modal-close-btn" onClick={() => setIsQuickReminderOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleQuickReminderSubmit}>
+              <div class="modal-body">
+                <div class="form-grid">
+                  <p style={{ fontSize: '13.5px', gridColumn: '1 / -1' }}>
+                    Scheduling for: <strong>{customers.find(x => x.id === selectedCustId)?.customerName}</strong>
+                  </p>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                      Reminder Action Type
+                    </label>
+                    <select class="form-input" value={quickReminderType} onChange={e => setQuickReminderType(e.target.value)}>
+                      <option value="Follow-up Call">📞 Follow-up Call</option>
+                      <option value="Payment Due">💰 Payment Due Reminder</option>
+                      <option value="Delivery">🚚 Materials Delivery</option>
+                      <option value="Quotation Pending">📄 Quotation Pending Check</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                      Reminder Date & Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      class="form-input"
+                      value={quickReminderDate}
+                      onChange={e => setQuickReminderDate(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group-full">
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                      Additional Notes
+                    </label>
+                    <input
+                      type="text"
+                      class="form-input"
+                      placeholder="e.g. Call at 10 AM, check if advance ready..."
+                      value={quickReminderNotes}
+                      onChange={e => setNewCustDeliveryNotes(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onClick={() => setIsQuickReminderOpen(false)}>Cancel</button>
+                <button type="submit" class="btn btn-primary">Schedule</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
