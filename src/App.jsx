@@ -8,6 +8,46 @@ import CustomerDetail from './pages/CustomerDetail';
 function AppContent() {
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'pipeline', 'reminders', 'customer-detail'
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  React.useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+      // Update UI notify the user they can install the PWA
+      setShowInstallBanner(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // If already in standalone display mode, hide install prompt
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallBanner(false);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    // Show the native install prompt
+    deferredPrompt.prompt();
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to PWA install: ${outcome}`);
+    // We've used the prompt, reset state
+    setDeferredPrompt(null);
+    setShowInstallBanner(false);
+  };
+
+  const handleCloseBanner = () => {
+    setShowInstallBanner(false);
+  };
 
   const { activeStaff, setActiveStaff, staffList } = useCRMDatabase();
 
@@ -146,6 +186,27 @@ function AppContent() {
           Reminders
         </button>
       </nav>
+
+      {/* Glassmorphic PWA Install Banner */}
+      {showInstallBanner && (
+        <div className="pwa-install-banner animate-slide-in">
+          <div className="pwa-install-icon">
+            <svg viewBox="0 0 100 100" width="32" height="32">
+              <circle cx="50" cy="50" r="48" fill="#0B0F19" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#F97316" strokeWidth="1.8" />
+              <text x="50" y="58" fill="#F97316" fontSize="26" fontFamily="'Outfit', sans-serif" fontWeight="900" textAnchor="middle">SVP</text>
+            </svg>
+          </div>
+          <div className="pwa-install-text">
+            <h4>Install Sri Vasavi CRM</h4>
+            <p>Add to home screen for native experience & offline access</p>
+          </div>
+          <div className="pwa-install-actions">
+            <button className="pwa-install-btn" onClick={handleInstallClick}>Install</button>
+            <button className="pwa-close-btn" onClick={handleCloseBanner}>✕</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

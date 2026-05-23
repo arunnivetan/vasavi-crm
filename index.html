@@ -3,12 +3,99 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- PWA Primary Meta Tags -->
+    <meta name="theme-color" content="#0B0F19" />
     <meta name="description" content="Sri Vasavi Plywoods Hardware CRM and Follow-up Management Engine. Track pipeline deals, document notes, manage collection transactions, and generate professional PDF statements." />
     <title>Sri Vasavi Plywoods | CRM &amp; Follow-up Management Engine</title>
+    
+    <!-- iOS / Apple PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Vasavi CRM" />
+    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Premium Glassmorphic Brand Startup Loading Screen -->
+      <div style="
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        background: #0B0F19;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        color: #ffffff;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      ">
+        <div style="
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          background: rgba(17, 24, 39, 0.45);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(249, 115, 22, 0.15);
+          padding: 2.5rem 2rem;
+          border-radius: 24px;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+          max-width: 320px;
+          width: 85%;
+          text-align: center;
+        ">
+          <!-- Premium Logo Emblem -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="84" height="84" style="margin-bottom: 1.5rem;">
+            <circle cx="50" cy="50" r="48" fill="#0B0F19" />
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#F97316" stroke-width="1.8" />
+            <path id="top-text-path-load" d="M 12 50 A 38 38 0 0 1 88 50" fill="none" />
+            <text fill="#ffffff" font-size="5.2" font-weight="700" letter-spacing="1">
+              <textPath href="#top-text-path-load" startOffset="50%" text-anchor="middle">SRI VASAVI PLYWOOD</textPath>
+            </text>
+            <text x="50" y="58" fill="#F97316" font-size="22" font-weight="800" text-anchor="middle">SVP</text>
+          </svg>
+          
+          <h2 style="
+            margin: 0 0 0.4rem 0;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+          ">Vasavi CRM</h2>
+          <p style="
+            margin: 0 0 2.2rem 0;
+            font-size: 0.85rem;
+            color: #94A3B8;
+            font-weight: 500;
+          ">Plywoods &amp; Hardware Engine</p>
+          
+          <!-- Modern Spinner -->
+          <div style="
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(249, 115, 22, 0.15);
+            border-top-color: #F97316;
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+          "></div>
+        </div>
+      </div>
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        body {
+          margin: 0;
+          background: #0B0F19;
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
