@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { dbAPI, initLocalStorageDB, getImagesFromDB, saveImageToDB, deleteImageFromDB } from '../utils/db';
+import { databaseService } from '../lib/databaseService';
+import { getImagesFromDB, saveImageToDB, deleteImageFromDB } from '../utils/db';
 
 const CRMDatabaseContext = createContext(null);
 
@@ -23,49 +24,35 @@ export const CRMDatabaseProvider = ({ children }) => {
   // List of available staff members for dropdown selectors
   const staffList = ['Suresh', 'Suresh babu', 'Ravi', 'Arun', 'Admin'];
 
-  // Load database on mount
+  // Load database asynchronously on mount
   useEffect(() => {
-    const data = initLocalStorageDB();
-    setCustomers(data.customers);
-    setActivities(data.activities);
-    setNotes(data.notes);
-    setPayments(data.payments);
-    setReminders(data.reminders);
-    setStages(data.stages);
+    const loadDatabase = async () => {
+      try {
+        console.log('[CRM Context] Initializing database synchronization...');
+        const [custs, acts, nts, pmts, rems, stgs] = await Promise.all([
+          databaseService.fetchCustomers(),
+          databaseService.fetchActivities(),
+          databaseService.fetchNotes(),
+          databaseService.fetchPayments(),
+          databaseService.fetchReminders(),
+          databaseService.fetchStages()
+        ]);
+        
+        setCustomers(custs || []);
+        setActivities(acts || []);
+        setNotes(nts || []);
+        setPayments(pmts || []);
+        setReminders(rems || []);
+        setStages(stgs || []);
+        console.log('[CRM Context] Database synchronization complete.');
+      } catch (err) {
+        console.error('[CRM Context] Initial database sync failed:', err.message);
+      }
+    };
+    loadDatabase();
   }, []);
 
-  // Helpers to persist state to storage
-  const updateCustomersState = (newCustomers) => {
-    setCustomers(newCustomers);
-    dbAPI.saveCustomers(newCustomers);
-  };
-
-  const updateActivitiesState = (newActivities) => {
-    setActivities(newActivities);
-    dbAPI.saveActivities(newActivities);
-  };
-
-  const updateNotesState = (newNotes) => {
-    setNotes(newNotes);
-    dbAPI.saveNotes(newNotes);
-  };
-
-  const updatePaymentsState = (newPayments) => {
-    setPayments(newPayments);
-    dbAPI.savePayments(newPayments);
-  };
-
-  const updateRemindersState = (newReminders) => {
-    setReminders(newReminders);
-    dbAPI.saveReminders(newReminders);
-  };
-
-  const updateStagesState = (newStages) => {
-    setStages(newStages);
-    dbAPI.saveStages(newStages);
-  };
-
-  // --- BUSINESS LOGIC MUTATIONS ---
+  // --- BUSINESS LOGIC MUTATIONS WITH SUPABASE SYNC ---
 
   // 1. Add Customer
   const addCustomer = (customerData, staffName = activeStaff) => {
@@ -91,13 +78,13 @@ export const CRMDatabaseProvider = ({ children }) => {
       customerName: customerData.customerName,
       phone: customerData.phone || '',
       address: customerData.address || '',
-      requirement: customerData.requirement || '', // backward compat string
+      requirement: customerData.requirement || '', 
       projectType: customerData.projectType || 'Hardware',
       stage: customerData.stage || 'New Lead',
       assignedStaff: customerData.assignedStaff || staffName,
       followupDate: customerData.followupDate || '',
       
-      // Dynamic products columns
+      // Costing columns
       items: items,
       subtotal: subtotal,
       discount: discount,
@@ -111,11 +98,14 @@ export const CRMDatabaseProvider = ({ children }) => {
       priority: customerData.priority || 'Medium',
       tags: customerData.tags || [],
       createdAt: new Date().toISOString(),
-      isDeleted: false // Soft-delete to preserve history
+      isDeleted: false 
     };
 
-    // Save Customer
-    updateCustomersState([...customers, newCustomer]);
+    // 1. Update React state immediately
+    setCustomers(prev => [...prev, newCustomer]);
+    
+    // 2. Persist to DB in the background
+    databaseService.saveCustomer(newCustomer);
 
     // Save Initial Payment record if advance paid
     if (advancePaid > 0) {
@@ -128,7 +118,8 @@ export const CRMDatabaseProvider = ({ children }) => {
         timestamp: new Date().toISOString(),
         note: 'Initial Advance Payment'
       };
-      updatePaymentsState([newPayRecord, ...payments]);
+      setPayments(prev => [newPayRecord, ...prev]);
+      databaseService.savePayment(newPayRecord);
     }
 
     // Add activity history
@@ -136,11 +127,12 @@ export const CRMDatabaseProvider = ({ children }) => {
       customerId: newId,
       actionType: 'customer_created',
       oldValue: '',
-      newValue: `${newCustomer.customerName} added with ${items.length} items. Total: ₹${totalAmount}`,
+      newValue: `${newCustomer.customerName} added with ${items.length} items. Total: Rs. ${totalAmount}`,
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
 
     // If follow-up date is provided, automatically set a reminder
     if (newCustomer.followupDate) {
@@ -152,7 +144,8 @@ export const CRMDatabaseProvider = ({ children }) => {
         status: 'Pending',
         notes: 'Auto-created from customer creation'
       };
-      updateRemindersState([...reminders, newReminder]);
+      setReminders(prev => [...prev, newReminder]);
+      databaseService.saveReminder(newReminder);
     }
 
     return newCustomer;
@@ -163,10 +156,8 @@ export const CRMDatabaseProvider = ({ children }) => {
     const original = customers.find(c => c.id === customerId);
     if (!original) return;
 
-    // Check payment updates
     let updated = { ...original, ...updatedFields };
     
-    // Recalculate amount details if total, advance, items, subtotal, discount, or tax updated
     if (
       updatedFields.items !== undefined ||
       updatedFields.subtotal !== undefined ||
@@ -179,7 +170,6 @@ export const CRMDatabaseProvider = ({ children }) => {
       const discount = parseFloat(updated.discount || 0);
       const taxPercent = parseFloat(updated.taxPercent || 0);
       
-      // Auto-calculate taxAmount if subtotal/discount/taxPercent is modified and amount not directly set
       if (updatedFields.amount === undefined) {
         updated.taxAmount = ((subtotal - discount) * taxPercent) / 100;
         updated.amount = subtotal - discount + updated.taxAmount;
@@ -208,19 +198,23 @@ export const CRMDatabaseProvider = ({ children }) => {
       }
     });
 
-    const newCustomers = customers.map(c => c.id === customerId ? updated : c);
-    updateCustomersState(newCustomers);
+    // 1. Update React state immediately
+    setCustomers(prev => prev.map(c => c.id === customerId ? updated : c));
+
+    // 2. Persist to DB in the background
+    databaseService.saveCustomer(updated);
 
     if (changes.length > 0) {
       const activity = {
         customerId,
         actionType: 'customer_edited',
         oldValue: '',
-        newValue: `Updated: ${changes.join(', ')}. New Grand Total: ₹${updated.amount}`,
+        newValue: `Updated: ${changes.join(', ')}. New Grand Total: Rs. ${updated.amount}`,
         updatedBy: staffName,
         timestamp: new Date().toISOString()
       };
-      updateActivitiesState([activity, ...activities]);
+      setActivities(prev => [activity, ...prev]);
+      databaseService.saveActivity(activity);
     }
 
     // Sync automatic reminder if followup date changes
@@ -233,7 +227,8 @@ export const CRMDatabaseProvider = ({ children }) => {
         status: 'Pending',
         notes: 'Follow-up date updated'
       };
-      updateRemindersState([...reminders, newReminder]);
+      setReminders(prev => [...prev, newReminder]);
+      databaseService.saveReminder(newReminder);
     }
   };
 
@@ -245,10 +240,11 @@ export const CRMDatabaseProvider = ({ children }) => {
     const oldStage = customer.stage;
     if (oldStage === newStage) return;
 
-    const newCustomers = customers.map(c => 
-      c.id === customerId ? { ...c, stage: newStage } : c
-    );
-    updateCustomersState(newCustomers);
+    const updatedCust = { ...customer, stage: newStage };
+
+    // Update state and DB
+    setCustomers(prev => prev.map(c => c.id === customerId ? updatedCust : c));
+    databaseService.saveCustomer(updatedCust);
 
     const activity = {
       customerId,
@@ -258,7 +254,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
   };
 
   // 4. Update Payment / Add Payment Transaction
@@ -276,18 +273,18 @@ export const CRMDatabaseProvider = ({ children }) => {
       newStatus = newPending <= 0 ? 'Paid' : 'Partial';
     }
 
-    // Update Customer
-    const newCustomers = customers.map(c => 
-      c.id === customerId ? {
-        ...c,
-        advancePaid: newAdvance,
-        pendingAmount: newPending,
-        paymentStatus: newStatus
-      } : c
-    );
-    updateCustomersState(newCustomers);
+    const updatedCust = {
+      ...customer,
+      advancePaid: newAdvance,
+      pendingAmount: newPending,
+      paymentStatus: newStatus
+    };
 
-    // Save transaction
+    // Update state & DB
+    setCustomers(prev => prev.map(c => c.id === customerId ? updatedCust : c));
+    databaseService.saveCustomer(updatedCust);
+
+    // Save transaction record
     const newPayRecord = {
       id: 'pay_' + Date.now(),
       customerId,
@@ -297,18 +294,20 @@ export const CRMDatabaseProvider = ({ children }) => {
       timestamp: new Date().toISOString(),
       note: note || 'Payment installment received'
     };
-    updatePaymentsState([newPayRecord, ...payments]);
+    setPayments(prev => [newPayRecord, ...prev]);
+    databaseService.savePayment(newPayRecord);
 
     // Save Activity
     const activity = {
       customerId,
       actionType: 'payment_update',
-      oldValue: `${customer.paymentStatus} (Bal: ₹${customer.pendingAmount})`,
-      newValue: `Payment: ₹${pAmount} received. Balance: ₹${newPending} (${newStatus})`,
+      oldValue: `${customer.paymentStatus} (Bal: Rs. ${customer.pendingAmount})`,
+      newValue: `Payment: Rs. ${pAmount} received. Balance: Rs. ${newPending} (${newStatus})`,
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
   };
 
   // Mark customer fully paid
@@ -332,7 +331,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       timestamp: new Date().toISOString()
     };
 
-    updateNotesState([newNote, ...notes]);
+    setNotes(prev => [newNote, ...prev]);
+    databaseService.saveNote(newNote);
 
     const activity = {
       customerId,
@@ -342,7 +342,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
   };
 
   // 6. Reminders System
@@ -350,13 +351,14 @@ export const CRMDatabaseProvider = ({ children }) => {
     const newReminder = {
       id: 'rem_' + Date.now(),
       customerId,
-      reminderType, // 'Follow-up Call', 'Payment Due', 'Delivery', 'Quotation Pending'
+      reminderType, 
       reminderDate,
       status: 'Pending',
       notes: notesText
     };
 
-    updateRemindersState([...reminders, newReminder]);
+    setReminders(prev => [...prev, newReminder]);
+    databaseService.saveReminder(newReminder);
 
     const activity = {
       customerId,
@@ -366,17 +368,18 @@ export const CRMDatabaseProvider = ({ children }) => {
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
   };
 
   const snoozeReminder = (reminderId, newDate, staffName = activeStaff) => {
     const reminder = reminders.find(r => r.id === reminderId);
     if (!reminder) return;
 
-    const updatedReminders = reminders.map(r => 
-      r.id === reminderId ? { ...r, reminderDate: newDate, status: 'Snoozed' } : r
-    );
-    updateRemindersState(updatedReminders);
+    const updatedRem = { ...reminder, reminderDate: newDate, status: 'Snoozed' };
+
+    setReminders(prev => prev.map(r => r.id === reminderId ? updatedRem : r));
+    databaseService.saveReminder(updatedRem);
 
     const activity = {
       customerId: reminder.customerId,
@@ -386,17 +389,18 @@ export const CRMDatabaseProvider = ({ children }) => {
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
   };
 
   const completeReminder = (reminderId, staffName = activeStaff) => {
     const reminder = reminders.find(r => r.id === reminderId);
     if (!reminder) return;
 
-    const updatedReminders = reminders.map(r => 
-      r.id === reminderId ? { ...r, status: 'Completed' } : r
-    );
-    updateRemindersState(updatedReminders);
+    const updatedRem = { ...reminder, status: 'Completed' };
+
+    setReminders(prev => prev.map(r => r.id === reminderId ? updatedRem : r));
+    databaseService.saveReminder(updatedRem);
 
     const activity = {
       customerId: reminder.customerId,
@@ -406,7 +410,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
   };
 
   // 7. Soft Delete Customer (preserves complete activity and history database)
@@ -414,10 +419,9 @@ export const CRMDatabaseProvider = ({ children }) => {
     const customer = customers.find(c => c.id === customerId);
     if (!customer) return;
 
-    const updatedCustomers = customers.map(c => 
-      c.id === customerId ? { ...c, isDeleted: true } : c
-    );
-    updateCustomersState(updatedCustomers);
+    // Update state & DB
+    setCustomers(prev => prev.filter(c => c.id !== customerId));
+    databaseService.deleteCustomer(customerId);
 
     const activity = {
       customerId,
@@ -427,7 +431,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
   };
 
   // 8. Pipeline Stage Configurations
@@ -441,7 +446,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       stageOrder: stages.length + 1
     };
 
-    updateStagesState([...stages, newStage]);
+    setStages(prev => [...prev, newStage]);
+    databaseService.saveStage(newStage);
     return true;
   };
 
@@ -449,36 +455,41 @@ export const CRMDatabaseProvider = ({ children }) => {
     const updatedStages = stages.map(s => 
       s.stageName === oldName ? { ...s, stageName: newName } : s
     );
-    updateStagesState(updatedStages);
+    setStages(updatedStages);
+    databaseService.saveAllStages(updatedStages);
 
-    // Update stages of all customers holding that stage
     const updatedCustomers = customers.map(c => 
       c.stage === oldName ? { ...c, stage: newName } : c
     );
-    updateCustomersState(updatedCustomers);
+    setCustomers(updatedCustomers);
+    // Sync affected customers
+    updatedCustomers.filter(c => c.stage === newName).forEach(c => {
+      databaseService.saveCustomer(c);
+    });
 
-    // Update stage changes in activity history if necessary
     return true;
   };
 
   const deleteStage = (stageName) => {
     const remainingStages = stages.filter(s => s.stageName !== stageName);
-    
-    // Re-index stage orders
     const ordered = remainingStages.map((s, idx) => ({ ...s, stageOrder: idx + 1 }));
-    updateStagesState(ordered);
+    setStages(ordered);
+    databaseService.deleteStage(stageName);
 
-    // Move affected customers back to first stage or 'New Lead'
     const fallbackStage = ordered[0]?.stageName || 'New Lead';
     const updatedCustomers = customers.map(c => 
       c.stage === stageName ? { ...c, stage: fallbackStage } : c
     );
-    updateCustomersState(updatedCustomers);
+    setCustomers(updatedCustomers);
+    updatedCustomers.filter(c => c.stage === fallbackStage).forEach(c => {
+      databaseService.saveCustomer(c);
+    });
   };
 
   const reorderStages = (reorderedStages) => {
     const updated = reorderedStages.map((s, idx) => ({ ...s, stageOrder: idx + 1 }));
-    updateStagesState(updated);
+    setStages(updated);
+    databaseService.saveAllStages(updated);
   };
 
   // 9. Site Photos & Blueprints Upload (IndexedDB direct integration)
@@ -494,7 +505,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
     
     return imgRecord;
   };
@@ -515,7 +527,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
   };
 
   // Helper activity log for PDFs
@@ -528,13 +541,14 @@ export const CRMDatabaseProvider = ({ children }) => {
       updatedBy: staffName,
       timestamp: new Date().toISOString()
     };
-    updateActivitiesState([activity, ...activities]);
+    setActivities(prev => [activity, ...prev]);
+    databaseService.saveActivity(activity);
   };
 
   return (
     <CRMDatabaseContext.Provider value={{
-      customers: customers.filter(c => !c.isDeleted), // Only expose non-deleted ones in views
-      allCustomersRaw: customers, // Archive access
+      customers: customers.filter(c => !c.isDeleted), 
+      allCustomersRaw: customers, 
       activities,
       notes,
       payments,

@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCRMDatabase } from '../context/CRMDatabaseContext';
 import { generateAllCustomersPDF, generateInvoicePDF } from '../utils/pdfGenerator';
 import { COMMON_PRODUCTS } from '../utils/db';
+import { supabase } from '../lib/supabase';
 
 export default function Dashboard({ onViewCustomer }) {
+  useEffect(() => {
+    const testConnection = async () => {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*');
+
+      console.log('[Supabase Connection Test] Data:', data);
+      console.log('[Supabase Connection Test] Error:', error);
+    };
+
+    testConnection();
+  }, []);
+
   const {
     customers,
     activities,
