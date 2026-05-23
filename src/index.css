@@ -2069,5 +2069,252 @@ a:hover {
   font-weight: 800;
 }
 
+/* ============================================================================
+   RESPONSIVE DESIGN & MOBILE-FIRST MEDIA QUERIES (Tailwind Breakpoints)
+   ============================================================================ */
+
+/* sm Breakpoint: Mobile & Portrait Tablets (max-width: 767px) */
+@media (max-width: 767px) {
+  .app-container {
+    padding: 10px 12px;
+  }
+  
+  .header-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding-bottom: 12px;
+  }
+  
+  .brand-section {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  
+  .brand-name {
+    font-size: 16px !important;
+  }
+  
+  .user-avatar-selector {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 4px;
+    border-top: 1px dashed var(--border-color);
+    padding-top: 8px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .page-header div, 
+  .page-header .quick-actions {
+    width: 100%;
+  }
+  
+  .page-header button,
+  .page-header a {
+    width: 100%;
+  }
+
+  /* Metric cards */
+  .metrics-grid {
+    grid-template-columns: 1fr 1fr !important; /* 2-column compact on mobile */
+    gap: 8px !important;
+    margin-bottom: 16px;
+  }
+  
+  .metric-card {
+    padding: 10px !important;
+  }
+  
+  .metric-val {
+    font-size: 18px !important;
+  }
+  
+  .metric-label {
+    font-size: 10.5px !important;
+  }
+
+  /* Alerts container */
+  .alerts-container {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Filter grid */
+  .filter-grid {
+    grid-template-columns: 1fr !important; /* Stack filters */
+    gap: 10px !important;
+  }
+
+  /* Tables to Scrollable containers */
+  .table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100% !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .crm-table {
+    min-width: 720px !important; /* Force scroll on narrow screens to prevent overlap */
+  }
+
+  .crm-table th, 
+  .crm-table td {
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* Modals responsive optimization */
+  .modal-content {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 10px auto;
+    padding: 16px !important;
+    border-radius: var(--radius-md) !important;
+    max-height: 95vh;
+    overflow-y: auto;
+  }
+
+  .modal-body {
+    padding: 10px 0 !important;
+  }
+
+  /* Forms & grids */
+  .form-grid, 
+  .form-grid.two-col,
+  .form-grid.three-col {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .form-group-full {
+    grid-column: span 1 !important;
+  }
+
+  /* Pipeline responsive scroll snap columns */
+  .pipeline-scroll-container {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    gap: 12px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .pipeline-column {
+    flex: 0 0 280px !important;
+    max-width: 280px !important;
+    scroll-snap-align: start;
+    max-height: 65vh !important;
+  }
+
+  /* Customer detail layout responsive stack */
+  .detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .images-grid {
+    grid-template-columns: 1fr 1fr !important; /* 2-column thumbnails */
+    gap: 8px !important;
+  }
+
+  .payment-metric-row {
+    grid-template-columns: 1fr !important; /* Stack payment values */
+    gap: 8px !important;
+  }
+
+  .quick-actions-panel {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Bottom Navigation optimization for narrow mobile devices */
+  .bottom-nav {
+    height: 60px !important;
+    padding: 0 4px !important;
+  }
+
+  .nav-item {
+    padding: 6px !important;
+    font-size: 9px !important;
+    gap: 2px !important;
+  }
+
+  .nav-item svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+
+/* md Breakpoint: Tablets & Small Laptops (min-width: 768px) and (max-width: 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .metrics-grid {
+    grid-template-columns: 1fr 1fr 1fr !important; /* 3 columns */
+    gap: 14px !important;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+
+  .pipeline-column {
+    flex: 0 0 300px !important;
+    max-height: 70vh !important;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .images-grid {
+    grid-template-columns: 1fr 1fr 1fr !important;
+  }
+}
+
+/* lg Breakpoint: Laptops & Desktops (min-width: 1024px) */
+@media (min-width: 1024px) {
+  .metrics-grid {
+    grid-template-columns: repeat(4, 1fr) !important; /* 4 columns standard */
+    gap: 16px !important;
+  }
+
+  .filter-grid {
+    grid-template-columns: 2fr 1fr 1fr 1fr !important;
+    gap: 12px !important;
+  }
+
+  .detail-grid {
+    grid-template-columns: 340px 1fr !important;
+  }
+
+  .images-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
+/* Specific micro fixes for very small 320px screens */
+@media (max-width: 350px) {
+  .metrics-grid {
+    grid-template-columns: 1fr !important; /* Stack metrics on extra tiny screens */
+  }
+
+  .nav-item span {
+    display: none !important; /* Hide labels if extremely narrow, keep clean icons */
+  }
+
+  .nav-item svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+}
+
+
 
 
