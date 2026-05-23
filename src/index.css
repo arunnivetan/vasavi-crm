@@ -2680,6 +2680,84 @@ a:hover {
     background: var(--bg-card) !important;
     border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
   }
+
+  /* ==========================================================================
+     PREMIUM MOBILE ACCESSIBILITY & THUMB-READY BUTTON REFINEMENTS
+     ========================================================================== */
+  
+  /* Scale up button heights, paddings and font sizes to meet 44px minimum target */
+  .btn {
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+    height: 48px !important;
+    border-radius: var(--radius-md) !important;
+    font-weight: 700 !important;
+  }
+  
+  .btn-sm {
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+    height: 44px !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+  }
+  
+  /* Circle touch targets for quick action icons */
+  .action-btn-circle {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 16px !important;
+  }
+  
+  .action-btn-circle svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  
+  /* checklist checkbox scaling in Reminders */
+  .ag-checkbox-round {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    border-width: 2px !important;
+    margin-top: 0px !important;
+  }
+  
+  /* Make Quick Actions grid items highly interactive */
+  .quick-actions-panel {
+    gap: 12px !important;
+  }
+  
+  .quick-actions-panel .btn {
+    border-radius: 12px !important;
+    border: 1px solid rgba(249, 115, 22, 0.15) !important;
+    background: rgba(21, 31, 50, 0.6) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s ease !important;
+  }
+  
+  .quick-actions-panel .btn:active {
+    background: var(--accent-glow) !important;
+    border-color: var(--accent) !important;
+    transform: scale(0.97) !important;
+  }
+
+  /* Sticky Bottom Navigation - Enhanced Touch Targets */
+  .bottom-nav {
+    height: 76px !important;
+    padding-bottom: env(safe-area-inset-bottom, 8px) !important;
+  }
+
+  .nav-item {
+    font-size: 11px !important;
+    gap: 6px !important;
+    height: 100% !important;
+  }
+
+  .nav-item svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
 }
 
 
