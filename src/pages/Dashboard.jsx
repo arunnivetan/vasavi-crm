@@ -351,9 +351,7 @@ export default function Dashboard({ onViewCustomer }) {
       );
     });
 
-    const paymentProgressBarPercent = grandTotal > 0 ? Math.min(100, Math.round((advancePaidVal / grandTotal) * 100)) : 0;
-
-    return (
+    const paymentProgressBarPercent = grandTotal > 0 ? Math.min(100, Math.round((advancePaidVal / grandTotal) * 100)) : 0;    return (
       <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
         
         {/* Custom Styles Injection */}
@@ -447,10 +445,196 @@ export default function Dashboard({ onViewCustomer }) {
             border-color: var(--accent);
             background: rgba(249, 115, 22, 0.02);
           }
+
+          /* Responsive utilities & Mobile Layout Redesign overrides */
+          .desktop-only {
+            display: block;
+          }
+          .mobile-only {
+            display: none !important;
+          }
+          .erp-main-col {
+            display: flex;
+            flex-direction: column;
+          }
+          .erp-sidebar-col {
+            position: sticky;
+            top: 70px;
+            display: flex;
+            flex-direction: column;
+          }
+          .erp-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+          }
+          .erp-form-grid-notes {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 18px;
+          }
+          .erp-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--bg-main);
+            z-index: 10;
+          }
+          .erp-modal-header-actions {
+            display: flex;
+            gap: 10px;
+          }
+          .erp-billing-donut-container {
+            display: flex;
+            gap: 18px;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+          }
+
+          @media (max-width: 768px) {
+            .desktop-only {
+              display: none !important;
+            }
+            .mobile-only {
+              display: block !important;
+            }
+            .erp-card {
+              padding: 14px 16px !important;
+              border-radius: 12px !important;
+              margin-bottom: 14px !important;
+            }
+            .erp-card-title {
+              font-size: 12px !important;
+              margin-bottom: 12px !important;
+            }
+            .erp-container {
+              margin-top: 12px !important;
+              gap: 16px !important;
+            }
+            .erp-sidebar-col {
+              position: static !important;
+              top: auto !important;
+              width: 100% !important;
+            }
+            .erp-form-grid-notes {
+              grid-template-columns: 1fr !important;
+              gap: 16px !important;
+            }
+          }
+
+          @media (max-width: 576px) {
+            .erp-form-grid {
+              grid-template-columns: 1fr !important;
+              gap: 12px !important;
+            }
+            .erp-modal-header {
+              flex-direction: column;
+              align-items: stretch !important;
+              gap: 12px !important;
+              padding-bottom: 12px !important;
+            }
+            .erp-modal-header-actions {
+              display: grid !important;
+              grid-template-columns: 1fr 1fr !important;
+              gap: 8px !important;
+            }
+          }
+
+          @media (max-width: 480px) {
+            .erp-billing-donut-container {
+              flex-direction: column !important;
+              align-items: center !important;
+              text-align: center !important;
+              gap: 14px !important;
+            }
+          }
+
+          /* Mobile materials cards custom styling */
+          .mobile-material-card {
+            background: rgba(16, 23, 38, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+          }
+          .mobile-material-card:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 4px 16px rgba(249, 115, 22, 0.1);
+          }
+          .mobile-material-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            padding-bottom: 8px;
+          }
+          .mobile-material-card-num {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent);
+            background: rgba(249, 115, 22, 0.08);
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .mobile-material-card-actions {
+            display: flex;
+            gap: 8px;
+          }
+          .mobile-material-card-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+          }
+          .mobile-material-card-row-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+          }
+          .mobile-material-card-row-3col {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1.2fr;
+            gap: 8px;
+            margin-bottom: 10px;
+          }
+          .mobile-material-card-total-bar {
+            background: rgba(16, 23, 38, 0.6);
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+          }
+          .mobile-material-card-total-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+          }
+          .mobile-material-card-total-val {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+          }
         `}} />
 
         {/* 1. Header Section */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '14px', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0, background: 'var(--bg-main)', zIndex: 10 }}>
+        <div className="erp-modal-header">
           <div>
             <h2 style={{ fontSize: '20px', fontWeight: '800', fontFamily: 'var(--font-display)', color: 'var(--text-white)', letterSpacing: '-0.5px' }}>
               Create New Client File
@@ -459,7 +643,7 @@ export default function Dashboard({ onViewCustomer }) {
               Manage customer projects, materials, billing, and follow-ups
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div className="erp-modal-header-actions">
             <button type="button" className="btn btn-secondary" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '500' }} onClick={() => setIsAddModalOpen(false)}>
               Save Draft
             </button>
@@ -489,13 +673,13 @@ export default function Dashboard({ onViewCustomer }) {
         <div className="erp-container">
           
           {/* Left Column (65% width) */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="erp-main-col">
             
             {/* Card 1: Client Information */}
             <div className="erp-card">
               <div className="erp-card-title">Client Profile Details</div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div className="erp-form-grid">
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label className="ag-form-label">Customer / Business Name *</label>
                   <input
@@ -569,59 +753,231 @@ export default function Dashboard({ onViewCustomer }) {
                 </button>
               </div>
 
-              <div className="erp-table-wrapper">
-                <table className="erp-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '4%' }}>S.No</th>
-                      <th style={{ width: '38%' }}>Product Name</th>
-                      <th style={{ width: '18%' }}>Category</th>
-                      <th style={{ width: '10%' }}>Qty</th>
-                      <th style={{ width: '10%' }}>Unit</th>
-                      <th style={{ width: '12%' }}>Rate (₹)</th>
-                      <th style={{ width: '12%' }}>Status</th>
-                      <th style={{ width: '14%', textAlign: 'right' }}>Total (₹)</th>
-                      <th style={{ width: '10%', textAlign: 'center' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {newCustItems.map((item, idx) => (
-                      <tr key={idx}>
-                        <td style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>{idx + 1}</td>
-                        <td>
+              {/* Desktop-only: spreadsheet ERP table */}
+              <div className="desktop-only">
+                <div className="erp-table-wrapper">
+                  <table className="erp-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '4%' }}>S.No</th>
+                        <th style={{ width: '38%' }}>Product Name</th>
+                        <th style={{ width: '18%' }}>Category</th>
+                        <th style={{ width: '10%' }}>Qty</th>
+                        <th style={{ width: '10%' }}>Unit</th>
+                        <th style={{ width: '12%' }}>Rate (₹)</th>
+                        <th style={{ width: '12%' }}>Status</th>
+                        <th style={{ width: '14%', textAlign: 'right' }}>Total (₹)</th>
+                        <th style={{ width: '10%', textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {newCustItems.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>{idx + 1}</td>
+                          <td>
+                            <input
+                              type="text"
+                              className="erp-input-inline"
+                              placeholder="Type product name..."
+                              list="common-products"
+                              value={item.productName}
+                              onChange={e => handleItemChange(idx, 'productName', e.target.value)}
+                              required
+                            />
+                          </td>
+                          <td>
+                            <select className="erp-input-inline" style={{ padding: '4px 6px' }} value={item.category || 'Material'} onChange={e => handleItemChange(idx, 'category', e.target.value)}>
+                              <option value="Material">Material</option>
+                              <option value="Installation">Installation</option>
+                              <option value="Automation">Automation</option>
+                              <option value="Labor">Labor</option>
+                              <option value="Miscellaneous">Misc</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="erp-input-inline"
+                              style={{ textAlign: 'center' }}
+                              min="0.01"
+                              step="any"
+                              value={item.qty}
+                              onChange={e => handleItemChange(idx, 'qty', e.target.value)}
+                              required
+                            />
+                          </td>
+                          <td>
+                            <select className="erp-input-inline" style={{ padding: '4px' }} value={item.unit} onChange={e => handleItemChange(idx, 'unit', e.target.value)}>
+                              <option value="Sheets">Sheets</option>
+                              <option value="Sets">Sets</option>
+                              <option value="Pcs">Pcs</option>
+                              <option value="Boxes">Boxes</option>
+                              <option value="Kgs">Kgs</option>
+                              <option value="Rft">Rft</option>
+                              <option value="Lot">Lot</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="erp-input-inline"
+                              style={{ textAlign: 'right' }}
+                              min="0"
+                              step="any"
+                              value={item.rate}
+                              onChange={e => handleItemChange(idx, 'rate', e.target.value)}
+                              required
+                            />
+                          </td>
+                          <td>
+                            <select className="erp-input-inline" style={{ padding: '4px' }} value={item.status || 'Pending'} onChange={e => handleItemChange(idx, 'status', e.target.value)}>
+                              <option value="Pending">Pending</option>
+                              <option value="Ordered">Ordered</option>
+                              <option value="Delivered">Delivered</option>
+                              <option value="Installed">Installed</option>
+                            </select>
+                          </td>
+                          <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: '700', color: 'var(--text-white)' }}>
+                            ₹{(parseFloat(item.total) || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                              <button
+                                type="button"
+                                className="action-btn-circle accent"
+                                style={{ width: '22px', height: '22px', fontSize: '9px' }}
+                                onClick={() => handleDuplicateRow(idx)}
+                                title="Duplicate row"
+                              >
+                                📋
+                              </button>
+                              <button
+                                type="button"
+                                className="action-btn-circle"
+                                style={{ width: '22px', height: '22px', fontSize: '11px', color: 'var(--status-red)', borderColor: 'rgba(239, 68, 68, 0.15)' }}
+                                onClick={() => handleDeleteRow(idx)}
+                                title="Delete row"
+                              >
+                                &times;
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Table Footer Details */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '20px', padding: '10px 10px 0 0', borderTop: '1px solid rgba(255,255,255,0.02)' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Total Items: <strong style={{ color: 'var(--text-white)' }}>{newCustItems.length}</strong>
+                  </span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Combined Subtotal: <strong style={{ color: 'var(--accent)' }}>₹{subtotal.toLocaleString('en-IN')}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Mobile-only: touch friendly stacked card inputs */}
+              <div className="mobile-only">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {newCustItems.map((item, idx) => (
+                    <div className="mobile-material-card" key={idx}>
+                      <div className="mobile-material-card-header">
+                        <span className="mobile-material-card-num">Item #{idx + 1}</span>
+                        <div className="mobile-material-card-actions">
+                          <button
+                            type="button"
+                            className="action-btn-circle accent"
+                            style={{ width: '28px', height: '28px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onClick={() => handleDuplicateRow(idx)}
+                            title="Duplicate row"
+                          >
+                            📋
+                          </button>
+                          <button
+                            type="button"
+                            className="action-btn-circle"
+                            style={{ width: '28px', height: '28px', fontSize: '14px', color: 'var(--status-red)', borderColor: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onClick={() => handleDeleteRow(idx)}
+                            title="Delete row"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mobile-material-card-row">
+                        <div>
+                          <label className="ag-form-label" style={{ fontSize: '10px', marginBottom: '4px' }}>Product Name</label>
                           <input
                             type="text"
                             className="erp-input-inline"
+                            style={{ padding: '8px 10px', fontSize: '12.5px' }}
                             placeholder="Type product name..."
                             list="common-products"
                             value={item.productName}
                             onChange={e => handleItemChange(idx, 'productName', e.target.value)}
                             required
                           />
-                        </td>
-                        <td>
-                          <select className="erp-input-inline" style={{ padding: '4px 6px' }} value={item.category || 'Material'} onChange={e => handleItemChange(idx, 'category', e.target.value)}>
+                        </div>
+                      </div>
+
+                      <div className="mobile-material-card-row-2col">
+                        <div>
+                          <label className="ag-form-label" style={{ fontSize: '10px', marginBottom: '4px' }}>Category</label>
+                          <select 
+                            className="erp-input-inline" 
+                            style={{ padding: '8px 10px', fontSize: '12.5px', height: '36px' }} 
+                            value={item.category || 'Material'} 
+                            onChange={e => handleItemChange(idx, 'category', e.target.value)}
+                          >
                             <option value="Material">Material</option>
                             <option value="Installation">Installation</option>
                             <option value="Automation">Automation</option>
                             <option value="Labor">Labor</option>
                             <option value="Miscellaneous">Misc</option>
                           </select>
-                        </td>
-                        <td>
+                        </div>
+                        <div>
+                          <label className="ag-form-label" style={{ fontSize: '10px', marginBottom: '4px' }}>Status</label>
+                          <select 
+                            className="erp-input-inline" 
+                            style={{ padding: '8px 10px', fontSize: '12.5px', height: '36px' }} 
+                            value={item.status || 'Pending'} 
+                            onChange={e => handleItemChange(idx, 'status', e.target.value)}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Ordered">Ordered</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Installed">Installed</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="mobile-material-card-row-3col">
+                        <div>
+                          <label className="ag-form-label" style={{ fontSize: '10px', marginBottom: '4px' }}>Qty</label>
                           <input
                             type="number"
                             className="erp-input-inline"
-                            style={{ textAlign: 'center' }}
+                            style={{ padding: '8px 6px', fontSize: '12.5px', textAlign: 'center' }}
                             min="0.01"
                             step="any"
                             value={item.qty}
                             onChange={e => handleItemChange(idx, 'qty', e.target.value)}
                             required
                           />
-                        </td>
-                        <td>
-                          <select className="erp-input-inline" style={{ padding: '4px' }} value={item.unit} onChange={e => handleItemChange(idx, 'unit', e.target.value)}>
+                        </div>
+                        <div>
+                          <label className="ag-form-label" style={{ fontSize: '10px', marginBottom: '4px' }}>Unit</label>
+                          <select 
+                            className="erp-input-inline" 
+                            style={{ padding: '8px 4px', fontSize: '11px', height: '36px' }} 
+                            value={item.unit} 
+                            onChange={e => handleItemChange(idx, 'unit', e.target.value)}
+                          >
                             <option value="Sheets">Sheets</option>
                             <option value="Sets">Sets</option>
                             <option value="Pcs">Pcs</option>
@@ -630,56 +986,41 @@ export default function Dashboard({ onViewCustomer }) {
                             <option value="Rft">Rft</option>
                             <option value="Lot">Lot</option>
                           </select>
-                        </td>
-                        <td>
+                        </div>
+                        <div>
+                          <label className="ag-form-label" style={{ fontSize: '10px', marginBottom: '4px' }}>Rate (₹)</label>
                           <input
                             type="number"
                             className="erp-input-inline"
-                            style={{ textAlign: 'right' }}
+                            style={{ padding: '8px 8px', fontSize: '12.5px', textAlign: 'right' }}
                             min="0"
                             step="any"
                             value={item.rate}
                             onChange={e => handleItemChange(idx, 'rate', e.target.value)}
                             required
                           />
-                        </td>
-                        <td>
-                          <select className="erp-input-inline" style={{ padding: '4px' }} value={item.status || 'Pending'} onChange={e => handleItemChange(idx, 'status', e.target.value)}>
-                            <option value="Pending">Pending</option>
-                            <option value="Ordered">Ordered</option>
-                            <option value="Delivered">Delivered</option>
-                            <option value="Installed">Installed</option>
-                          </select>
-                        </td>
-                        <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: '700', color: 'var(--text-white)' }}>
-                          ₹{(parseFloat(item.total) || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                            <button
-                              type="button"
-                              className="action-btn-circle accent"
-                              style={{ width: '22px', height: '22px', fontSize: '9px' }}
-                              onClick={() => handleDuplicateRow(idx)}
-                              title="Duplicate row"
-                            >
-                              📋
-                            </button>
-                            <button
-                              type="button"
-                              className="action-btn-circle"
-                              style={{ width: '22px', height: '22px', fontSize: '11px', color: 'var(--status-red)', borderColor: 'rgba(239, 68, 68, 0.15)' }}
-                              onClick={() => handleDeleteRow(idx)}
-                              title="Delete row"
-                            >
-                              &times;
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                      </div>
+
+                      <div className="mobile-material-card-total-bar">
+                        <span className="mobile-material-card-total-label">Row Total</span>
+                        <span className="mobile-material-card-total-val">₹{(parseFloat(item.total) || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Mobile Table Footer */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 6px 4px 6px', borderTop: '1px solid rgba(255,255,255,0.03)', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Total Items:</span>
+                    <strong style={{ color: 'var(--text-white)' }}>{newCustItems.length}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Combined Subtotal:</span>
+                    <strong style={{ color: 'var(--accent)' }}>₹{subtotal.toLocaleString('en-IN')}</strong>
+                  </div>
+                </div>
               </div>
 
               <datalist id="common-products">
@@ -687,23 +1028,13 @@ export default function Dashboard({ onViewCustomer }) {
                   <option key={pidx} value={prod} />
                 ))}
               </datalist>
-
-              {/* Table Footer Details */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '20px', padding: '10px 10px 0 0', borderTop: '1px solid rgba(255,255,255,0.02)' }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  Total Items: <strong style={{ color: 'var(--text-white)' }}>{newCustItems.length}</strong>
-                </span>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  Combined Subtotal: <strong style={{ color: 'var(--accent)' }}>₹{subtotal.toLocaleString('en-IN')}</strong>
-                </span>
-              </div>
             </div>
 
             {/* Card 3: Site & Delivery Details */}
             <div className="erp-card">
               <div className="erp-card-title">Site & Delivery Details</div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div className="erp-form-grid">
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label className="ag-form-label">
                     Site Address
@@ -745,7 +1076,7 @@ export default function Dashboard({ onViewCustomer }) {
             <div className="erp-card">
               <div className="erp-card-title">Notes & File Uploads</div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '18px' }}>
+              <div className="erp-form-grid-notes">
                 {/* Internal notes */}
                 <div>
                   <label className="ag-form-label">Internal Executive Notes</label>
@@ -794,14 +1125,14 @@ export default function Dashboard({ onViewCustomer }) {
           </div>
 
           {/* Right Sidebar Column (Sticky, 35% width) */}
-          <div style={{ position: 'sticky', top: '70px', display: 'flex', flexDirection: 'column' }}>
+          <div className="erp-sidebar-col">
             
-            {/* Sidebar Card 1: Billing Summary Card */}
+            {/* Sidebar Card 1: Billing Workspace & Financials */}
             <div className="erp-card" style={{ background: 'linear-gradient(to bottom, rgba(21, 31, 50, 0.6) 0%, rgba(21, 31, 50, 0.4) 100%)', border: '1px solid rgba(249, 115, 22, 0.08)' }}>
               <div className="erp-card-title" style={{ color: 'var(--accent)' }}>Billing Workspace & Financials</div>
               
               {/* SVG Cost Split Ring & Legend */}
-              <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '18px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+              <div className="erp-billing-donut-container">
                 <div style={{ width: '70px', height: '70px', position: 'relative', flexShrink: 0 }}>
                   <svg viewBox="0 0 40 40" width="100%" height="100%">
                     <circle cx="20" cy="20" r="15.9155" fill="transparent" stroke="rgba(255,255,255,0.03)" strokeWidth="3.5" />
@@ -814,7 +1145,7 @@ export default function Dashboard({ onViewCustomer }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '140px' }}>
                   {donutCategories.map((cat, idx) => {
                     const val = cat.value;
                     const pct = totalCatVal > 0 ? Math.round((val / totalCatVal) * 100) : 0;
@@ -995,7 +1326,6 @@ export default function Dashboard({ onViewCustomer }) {
                 </div>
               </div>
             </div>
-
           </div>
 
         </div>
