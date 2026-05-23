@@ -1046,8 +1046,9 @@ export default function CustomerDetail({ customerId, onBack }) {
 
       {/* MODAL 1: EDIT CUSTOMER METADATA */}
       {isEditInfoOpen && (
-        <div class="modal-overlay">
-          <div class="modal-content" style={{ maxWidth: '780px', width: '100%' }}>
+        <div class="modal-overlay drawer-overlay">
+          <div class="modal-content bottom-sheet" style={{ maxWidth: '780px', width: '100%', borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div class="modal-header">
               <h3>Edit Client File</h3>
               <button class="modal-close-btn" onClick={() => setIsEditInfoOpen(false)}>&times;</button>
@@ -1469,8 +1470,9 @@ export default function CustomerDetail({ customerId, onBack }) {
 
       {/* MODAL 2: UPDATE PAYMENTS TRANSACTION */}
       {isUpdatePayOpen && (
-        <div class="modal-overlay">
-          <div class="modal-content" style={{ maxWidth: '780px', width: '100%' }}>
+        <div class="modal-overlay drawer-overlay">
+          <div class="modal-content bottom-sheet" style={{ maxWidth: '780px', width: '100%', borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div class="modal-header">
               <h3>Edit Payment Details</h3>
               <button class="modal-close-btn" onClick={() => setIsUpdatePayOpen(false)}>&times;</button>
@@ -1736,8 +1738,9 @@ export default function CustomerDetail({ customerId, onBack }) {
 
       {/* MODAL 3: MOVE PIPELINE STAGE */}
       {isMoveStageOpen && (
-        <div class="modal-overlay">
-          <div class="modal-content">
+        <div class="modal-overlay drawer-overlay">
+          <div class="modal-content bottom-sheet" style={{ borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div class="modal-header">
               <h3>Move Pipeline Stage</h3>
               <button class="modal-close-btn" onClick={() => setIsMoveStageOpen(false)}>&times;</button>
@@ -1770,8 +1773,9 @@ export default function CustomerDetail({ customerId, onBack }) {
 
       {/* MODAL 4: CREATE SCHEDULED ALERT */}
       {isAddReminderOpen && (
-        <div class="modal-overlay">
-          <div class="modal-content">
+        <div class="modal-overlay drawer-overlay">
+          <div class="modal-content bottom-sheet" style={{ borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div class="modal-header">
               <h3>Schedule Follow-Up Reminder</h3>
               <button class="modal-close-btn" onClick={() => setIsAddReminderOpen(false)}>&times;</button>
@@ -1823,8 +1827,9 @@ export default function CustomerDetail({ customerId, onBack }) {
 
       {/* MODAL 5: SNOOZE FOLLOWUP DATE */}
       {isSnoozeOpen && activeReminderId && (
-        <div class="modal-overlay">
-          <div class="modal-content">
+        <div class="modal-overlay drawer-overlay">
+          <div class="modal-content bottom-sheet" style={{ borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div class="modal-header">
               <h3>Snooze Follow-Up Reminder</h3>
               <button class="modal-close-btn" onClick={() => { setIsSnoozeOpen(false); setActiveReminderId(null); }}>&times;</button>

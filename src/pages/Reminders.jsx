@@ -469,8 +469,9 @@ export default function Reminders({ onViewCustomer }) {
 
       {/* --- ADD REMINDER OVERLAY --- */}
       {isAddOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '440px', width: '100%', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.05)', boxShadow: 'var(--shadow-lg)' }}>
+        <div className="modal-overlay drawer-overlay">
+          <div className="modal-content bottom-sheet" style={{ maxWidth: '440px', width: '100%', borderRadius: '20px 20px 0 0', border: '1px solid rgba(255, 255, 255, 0.05)', boxShadow: 'var(--shadow-lg)' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div className="modal-header" style={{ paddingBottom: '12px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', fontFamily: 'var(--font-display)' }}>Schedule Customer Follow-up</h3>
               <button className="modal-close-btn" style={{ fontSize: '20px', color: 'var(--text-muted)' }} onClick={() => setIsAddOpen(false)}>&times;</button>
@@ -565,8 +566,9 @@ export default function Reminders({ onViewCustomer }) {
 
       {/* --- SNOOZE CONFIRMATION OVERLAY --- */}
       {isSnoozeOpen && activeRemId && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '360px', width: '100%', borderRadius: '14px' }}>
+        <div className="modal-overlay drawer-overlay">
+          <div className="modal-content bottom-sheet" style={{ maxWidth: '360px', width: '100%', borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div className="modal-header">
               <h3 style={{ fontSize: '15px', fontWeight: '700' }}>Snooze Follow-Up</h3>
               <button className="modal-close-btn" onClick={() => { setIsSnoozeOpen(false); setActiveRemId(null); }}>&times;</button>

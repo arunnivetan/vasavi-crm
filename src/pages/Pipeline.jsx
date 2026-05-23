@@ -194,8 +194,9 @@ export default function Pipeline({ onViewCustomer }) {
 
       {/* MODAL 1: MOVE CARD STAGE */}
       {isMoveModalOpen && selectedCustId && (
-        <div class="modal-overlay">
-          <div class="modal-content">
+        <div class="modal-overlay drawer-overlay">
+          <div class="modal-content bottom-sheet" style={{ borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div class="modal-header">
               <h3>Move Deal Pipeline Stage</h3>
               <button class="modal-close-btn" onClick={() => { setIsMoveModalOpen(false); setSelectedCustId(null); }}>&times;</button>
@@ -249,8 +250,9 @@ export default function Pipeline({ onViewCustomer }) {
 
       {/* MODAL 2: PIPELINE STAGES SETTINGS (MANAGE COLUMNS) */}
       {isSettingsOpen && (
-        <div class="modal-overlay">
-          <div class="modal-content" style={{ maxWidth: '550px' }}>
+        <div class="modal-overlay drawer-overlay">
+          <div class="modal-content bottom-sheet" style={{ maxWidth: '550px', borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div class="modal-header">
               <h3>Pipeline Stage Manager</h3>
               <button class="modal-close-btn" onClick={() => setIsSettingsOpen(false)}>&times;</button>
@@ -357,11 +359,11 @@ export default function Pipeline({ onViewCustomer }) {
                       <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>Column Dot Color</label>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <input
-                          type="color"
-                          class="form-input"
-                          style={{ padding: '0', height: '36px', width: '50px', cursor: 'pointer' }}
-                          value={addStageColor}
-                          onChange={e => setAddStageColor(e.target.value)}
+                           type="color"
+                           class="form-input"
+                           style={{ padding: '0', height: '36px', width: '50px', cursor: 'pointer' }}
+                           value={addStageColor}
+                           onChange={e => setAddStageColor(e.target.value)}
                         />
                         <span style={{ fontSize: '12px', fontFamily: 'monospace' }}>{addStageColor}</span>
                       </div>

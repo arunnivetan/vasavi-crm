@@ -45,6 +45,7 @@ export default function Dashboard({ onViewCustomer }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isQuickMoveOpen, setIsQuickMoveOpen] = useState(false);
   const [selectedCustId, setSelectedCustId] = useState(null);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   
   const [isQuickNoteOpen, setIsQuickNoteOpen] = useState(false);
   const [quickNoteText, setQuickNoteText] = useState('');
@@ -1189,7 +1190,8 @@ export default function Dashboard({ onViewCustomer }) {
 
       {/* DYNAMIC FILTER BAR */}
       <div class="filter-panel">
-        <div class="filter-grid">
+        {/* Desktop View (Standard 4 columns grid) */}
+        <div class="filter-grid desktop-only">
           <div class="filter-group">
             <label>Search Client</label>
             <div class="search-input-wrapper">
@@ -1237,118 +1239,334 @@ export default function Dashboard({ onViewCustomer }) {
             </select>
           </div>
         </div>
+
+        {/* Mobile-First Premium Compact Filter Layout */}
+        <div class="mobile-only-flex" style={{ width: '100%', gap: '8px', alignItems: 'center', margin: '4px 0 8px 0' }}>
+          <div class="search-input-wrapper" style={{ flex: 1, margin: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="text"
+              class="form-input form-input-search"
+              style={{ fontSize: '13px', height: '38px', paddingLeft: '32px' }}
+              placeholder="Search clients..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button
+            class="filter-chip"
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              height: '38px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: (selectedStage !== 'All' || selectedStaff !== 'All' || selectedPriority !== 'All') ? 'var(--accent-glow)' : 'rgba(255,255,255,0.03)',
+              borderColor: (selectedStage !== 'All' || selectedStaff !== 'All' || selectedPriority !== 'All') ? 'var(--accent)' : 'var(--border-color)',
+              color: (selectedStage !== 'All' || selectedStaff !== 'All' || selectedPriority !== 'All') ? 'var(--text-white)' : 'var(--text-muted)'
+            }}
+            onClick={() => setIsMobileFilterOpen(true)}
+          >
+            <span>⚡ Filters</span>
+            {(selectedStage !== 'All' || selectedStaff !== 'All' || selectedPriority !== 'All') && (
+              <span style={{
+                background: 'var(--accent)',
+                color: 'white',
+                borderRadius: '50%',
+                width: '15px',
+                height: '15px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '9px',
+                fontWeight: 'bold',
+                marginLeft: '2px'
+              }}>
+                {
+                  (selectedStage !== 'All' ? 1 : 0) +
+                  (selectedStaff !== 'All' ? 1 : 0) +
+                  (selectedPriority !== 'All' ? 1 : 0)
+                }
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* CLIENTS DIRECTORY - TABLE VIEW */}
+      {/* CLIENTS DIRECTORY */}
       <div class="table-container">
         {filteredCustomers.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
             No clients match the specified filter criteria.
           </div>
         ) : (
-          <table class="crm-table">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Requirement</th>
-                <th>Stage</th>
-                <th>Assigned</th>
-                <th>Payment</th>
-                <th>Follow-Up</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(filteredCustomers || []).map(c => {
-                if (!c) return null;
-                const stageColor = (stages || []).find(s => s.stageName === c.stage)?.stageColor || '#3B82F6';
-                return (
-                  <tr key={c.id}>
-                    {/* Customer Info */}
-                    <td data-label="Customer" onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
-                      <div class="customer-cell">
-                        <span class="name">{c.customerName || 'Unknown'}</span>
-                        <span class="phone">{c.phone || ''}</span>
+          <>
+            {/* Desktop View Table */}
+            <div class="desktop-only">
+              <table class="crm-table">
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Requirement</th>
+                    <th>Stage</th>
+                    <th>Assigned</th>
+                    <th>Payment</th>
+                    <th>Follow-Up</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(filteredCustomers || []).map(c => {
+                    if (!c) return null;
+                    const stageColor = (stages || []).find(s => s.stageName === c.stage)?.stageColor || '#3B82F6';
+                    return (
+                      <tr key={c.id}>
+                        {/* Customer Info */}
+                        <td data-label="Customer" onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
+                          <div class="customer-cell">
+                            <span class="name">{c.customerName || 'Unknown'}</span>
+                            <span class="phone">{c.phone || ''}</span>
+                          </div>
+                        </td>
+
+                        {/* Requirement details */}
+                        <td data-label="Requirement">
+                          <div style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {c.requirement || '—'}
+                          </div>
+                        </td>
+
+                        {/* Current Stage */}
+                        <td data-label="Stage">
+                          <span
+                            class="badge"
+                            style={{
+                              backgroundColor: `${stageColor}18`,
+                              color: stageColor,
+                              border: `1px solid ${stageColor}40`
+                            }}
+                          >
+                            {c.stage || 'New Lead'}
+                          </span>
+                        </td>
+
+                        {/* Assigned Representative */}
+                        <td data-label="Assigned">
+                          <span style={{ fontWeight: '500' }}>{c.assignedStaff || 'Unassigned'}</span>
+                        </td>
+
+                        {/* Payment Status Badges */}
+                        <td data-label="Payment">
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <span class={`badge badge-payment-${(c.paymentStatus || 'Pending').toLowerCase()}`}>
+                              {c.paymentStatus || 'Pending'}
+                            </span>
+                            {(c.pendingAmount || 0) > 0 && (
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                                Bal: ₹{c.pendingAmount}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Next Followup Date */}
+                        <td data-label="Follow-Up">
+                          {c.followupDate ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style={{ color: 'var(--accent)' }}>
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                              </svg>
+                              <span class={c.followupDate < todayStr ? 'overdue' : ''} style={{ color: c.followupDate < todayStr ? 'var(--status-red)' : 'inherit', fontWeight: c.followupDate < todayStr ? '600' : 'normal' }}>
+                                {c.followupDate}
+                              </span>
+                            </div>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
+                          )}
+                        </td>
+
+                        {/* Actions cell */}
+                        <td data-label="Actions">
+                          <div class="action-cell">
+                            {/* Call */}
+                            {c.phone && (
+                              <a href={`tel:${c.phone}`} class="action-btn-circle call" title="Call Customer">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.1-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                                </svg>
+                              </a>
+                            )}
+                            
+                            {/* WhatsApp */}
+                            {c.phone && (
+                              <a
+                                href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName || '')},%20this%20is%20regarding%20your%20requirement%20for%20${encodeURIComponent(c.requirement || '')}.`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="action-btn-circle whatsapp"
+                                title="WhatsApp Message"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                                </svg>
+                              </a>
+                            )}
+
+                            {/* Move stage shortcut */}
+                            <button
+                              class="action-btn-circle accent"
+                              title="Quick Move Stage"
+                              onClick={() => {
+                                setSelectedCustId(c.id);
+                                setIsQuickMoveOpen(true);
+                              }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                              </svg>
+                            </button>
+
+                            {/* Quick Note shortcut */}
+                            <button
+                              class="action-btn-circle"
+                              title="Quick Add Note"
+                              onClick={() => {
+                                setSelectedCustId(c.id);
+                                setIsQuickNoteOpen(true);
+                              }}
+                            >
+                              📝
+                            </button>
+
+                            {/* Quick Reminder shortcut */}
+                            <button
+                              class="action-btn-circle"
+                              title="Quick Reminder"
+                              onClick={() => {
+                                setSelectedCustId(c.id);
+                                setIsQuickReminderOpen(true);
+                              }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                              </svg>
+                            </button>
+                            
+                            {/* Single invoice trigger */}
+                            <button
+                              class="action-btn-circle"
+                              title="Generate Invoice Document"
+                              onClick={() => handleExportSingleInvoice(c)}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile View Stacked Cards */}
+            <div class="mobile-only">
+              <div class="mobile-customer-cards">
+                {(filteredCustomers || []).map(c => {
+                  if (!c) return null;
+                  const stageColor = (stages || []).find(s => s.stageName === c.stage)?.stageColor || '#3B82F6';
+                  const priorityColor = c.priority === 'High' ? 'var(--status-red)' : c.priority === 'Medium' ? 'var(--status-yellow)' : 'var(--status-green)';
+                  
+                  return (
+                    <div class="crm-card-compact" key={c.id}>
+                      <div class="crm-card-header" onClick={() => onViewCustomer(c.id)}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: priorityColor }} title={`${c.priority} Priority`}></span>
+                            <span class="crm-card-title">{c.customerName || 'Unknown'}</span>
+                          </div>
+                          {c.phone && <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>📞 {c.phone}</div>}
+                        </div>
+                        <div class="crm-card-badges">
+                          <span
+                            class="badge"
+                            style={{
+                              backgroundColor: `${stageColor}18`,
+                              color: stageColor,
+                              border: `1px solid ${stageColor}40`,
+                              fontSize: '9.5px',
+                              padding: '2px 6px'
+                            }}
+                          >
+                            {c.stage || 'New Lead'}
+                          </span>
+                        </div>
                       </div>
-                    </td>
 
-                    {/* Requirement details */}
-                    <td data-label="Requirement">
-                      <div style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {c.requirement || '—'}
-                      </div>
-                    </td>
-
-                    {/* Current Stage */}
-                    <td data-label="Stage">
-                      <span
-                        class="badge"
-                        style={{
-                          backgroundColor: `${stageColor}18`,
-                          color: stageColor,
-                          border: `1px solid ${stageColor}40`
-                        }}
-                      >
-                        {c.stage || 'New Lead'}
-                      </span>
-                    </td>
-
-                    {/* Assigned Representative */}
-                    <td data-label="Assigned">
-                      <span style={{ fontWeight: '500' }}>{c.assignedStaff || 'Unassigned'}</span>
-                    </td>
-
-                    {/* Payment Status Badges */}
-                    <td data-label="Payment">
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span class={`badge badge-payment-${(c.paymentStatus || 'Pending').toLowerCase()}`}>
-                          {c.paymentStatus || 'Pending'}
-                        </span>
+                      {/* Revenue Detail Row */}
+                      <div class="crm-card-details" onClick={() => onViewCustomer(c.id)}>
+                        <div class="crm-card-detail-row">
+                          <span class="crm-card-detail-label">Total Purchased:</span>
+                          <span class="crm-card-detail-value">₹{(c.amount || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                        {c.discount > 0 && (
+                          <div class="crm-card-detail-row">
+                            <span class="crm-card-detail-label">Discount:</span>
+                            <span class="crm-card-detail-value" style={{ color: 'var(--status-green)' }}>-₹{c.discount}</span>
+                          </div>
+                        )}
+                        <div class="crm-card-detail-row">
+                          <span class="crm-card-detail-label">Advance Paid:</span>
+                          <span class="crm-card-detail-value" style={{ color: 'var(--status-green)' }}>₹{(c.advancePaid || 0).toLocaleString('en-IN')}</span>
+                        </div>
                         {(c.pendingAmount || 0) > 0 && (
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                            Bal: ₹{c.pendingAmount}
+                          <div class="crm-card-detail-row" style={{ borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '4px', marginTop: '2px' }}>
+                            <span class="crm-card-detail-label" style={{ fontWeight: '600' }}>Balance Due:</span>
+                            <span class="crm-card-detail-value" style={{ color: 'var(--status-red)' }}>₹{c.pendingAmount}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Requirement & Representative */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', padding: '0 4px' }} onClick={() => onViewCustomer(c.id)}>
+                        <span>👤 {c.assignedStaff || 'Unassigned'}</span>
+                        {c.followupDate && (
+                          <span style={{ color: c.followupDate < todayStr ? 'var(--status-red)' : 'inherit', fontWeight: c.followupDate < todayStr ? '700' : 'normal' }}>
+                            📅 {c.followupDate}
                           </span>
                         )}
                       </div>
-                    </td>
 
-                    {/* Next Followup Date */}
-                    <td data-label="Follow-Up">
-                      {c.followupDate ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px' }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style={{ color: 'var(--accent)' }}>
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="16" y1="2" x2="16" y2="6"></line>
-                            <line x1="8" y1="2" x2="8" y2="6"></line>
-                          </svg>
-                          <span class={c.followupDate < todayStr ? 'overdue' : ''} style={{ color: c.followupDate < todayStr ? 'var(--status-red)' : 'inherit', fontWeight: c.followupDate < todayStr ? '600' : 'normal' }}>
-                            {c.followupDate}
-                          </span>
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
-                      )}
-                    </td>
-
-                    {/* Actions cell */}
-                    <td data-label="Actions">
-                      <div class="action-cell">
-                        {/* Call */}
+                      {/* Mobile Card Action Grid */}
+                      <div class="crm-card-actions">
                         {c.phone && (
-                          <a href={`tel:${c.phone}`} class="action-btn-circle call" title="Call Customer">
+                          <a href={`tel:${c.phone}`} class="action-btn-circle call" style={{ width: '32px', height: '32px' }} title="Call Customer">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.1-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                             </svg>
                           </a>
                         )}
-                        
-                        {/* WhatsApp */}
+
                         {c.phone && (
                           <a
-                            href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName || '')},%20this%20is%20regarding%20your%20requirement%20for%20${encodeURIComponent(c.requirement || '')}.`}
+                            href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName || '')},%20this%20is%20regarding%20your%20requirement.`}
                             target="_blank"
                             rel="noopener noreferrer"
                             class="action-btn-circle whatsapp"
+                            style={{ width: '32px', height: '32px' }}
                             title="WhatsApp Message"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1357,10 +1575,9 @@ export default function Dashboard({ onViewCustomer }) {
                           </a>
                         )}
 
-                        {/* Move stage shortcut */}
                         <button
                           class="action-btn-circle accent"
-                          title="Quick Move Stage"
+                          style={{ width: '32px', height: '32px' }}
                           onClick={() => {
                             setSelectedCustId(c.id);
                             setIsQuickMoveOpen(true);
@@ -1371,66 +1588,125 @@ export default function Dashboard({ onViewCustomer }) {
                           </svg>
                         </button>
 
-                        {/* Quick Note shortcut */}
                         <button
                           class="action-btn-circle"
-                          title="Quick Add Note"
+                          style={{ width: '32px', height: '32px' }}
                           onClick={() => {
                             setSelectedCustId(c.id);
                             setIsQuickNoteOpen(true);
                           }}
                         >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                          </svg>
-                        </button>
-
-                        {/* Quick Reminder shortcut */}
-                        <button
-                          class="action-btn-circle"
-                          title="Schedule Follow-up"
-                          onClick={() => {
-                            setSelectedCustId(c.id);
-                            setIsQuickReminderOpen(true);
-                          }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="16" y1="2" x2="16" y2="6"></line>
-                            <line x1="8" y1="2" x2="8" y2="6"></line>
-                          </svg>
-                        </button>
-
-                        {/* Generate invoice direct */}
-                        <button
-                          class="action-btn-circle"
-                          title="Download Invoice/Receipt"
-                          onClick={() => handleExportSingleInvoice(c)}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
-                          </svg>
+                          📝
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
         )}
       </div>
+
+      {/* MOBILE COLLAPSIBLE FILTER DRAWER */}
+      {isMobileFilterOpen && (
+        <div class="drawer-overlay" onClick={() => setIsMobileFilterOpen(false)}>
+          <div class="bottom-sheet" onClick={e => e.stopPropagation()}>
+            <div class="bottom-sheet-handle"></div>
+            <div class="modal-header" style={{ padding: '0 0 12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Filter Records</h3>
+              <button
+                class="modal-close-btn"
+                style={{ fontSize: '20px', color: 'var(--text-muted)' }}
+                onClick={() => setIsMobileFilterOpen(false)}
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div class="filter-group">
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Pipeline Stage</label>
+                <select class="form-input" style={{ width: '100%', height: '40px' }} value={selectedStage} onChange={e => setSelectedStage(e.target.value)}>
+                  <option value="All">All Stages</option>
+                  {(stages || []).map(s => (
+                    <option key={s?.stageName} value={s?.stageName}>{s?.stageName}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Assigned Staff</label>
+                <select class="form-input" style={{ width: '100%', height: '40px' }} value={selectedStaff} onChange={e => setSelectedStaff(e.target.value)}>
+                  <option value="All">All Staff</option>
+                  {(staffList || []).map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Priority</label>
+                <select class="form-input" style={{ width: '100%', height: '40px' }} value={selectedPriority} onChange={e => setSelectedPriority(e.target.value)}>
+                  <option value="All">All Priorities</option>
+                  <option value="High">🔴 High Priority</option>
+                  <option value="Medium">🟡 Medium Priority</option>
+                  <option value="Low">🟢 Low Priority</option>
+                </select>
+              </div>
+
+              {/* Reset active filters button */}
+              {(selectedStage !== 'All' || selectedStaff !== 'All' || selectedPriority !== 'All') && (
+                <button
+                  class="btn btn-secondary"
+                  style={{ marginTop: '8px', justifyContent: 'center' }}
+                  onClick={() => {
+                    setSelectedStage('All');
+                    setSelectedStaff('All');
+                    setSelectedPriority('All');
+                    setIsMobileFilterOpen(false);
+                  }}
+                >
+                  Clear All Active Filters
+                </button>
+              )}
+
+              <button
+                class="btn btn-primary"
+                style={{
+                  background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)',
+                  border: 'none',
+                  boxShadow: '0 4px 14px rgba(249, 115, 22, 0.3)',
+                  height: '40px',
+                  justifyContent: 'center',
+                  fontWeight: '700',
+                  marginTop: '4px'
+                }}
+                onClick={() => setIsMobileFilterOpen(false)}
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Action Button for Mobile Create Customer */}
+      <button
+        class="floating-add-btn mobile-only"
+        onClick={() => setIsAddModalOpen(true)}
+        title="Create Customer File"
+      >
+        +
+      </button>
 
       {/* --- POPUPS & MODALS OVERLAYS --- */}
 
       {/* MODAL 2: QUICK MOVE PIPELINE STAGE */}
       {isQuickMoveOpen && selectedCustId && (
-        <div class="modal-overlay">
-          <div class="modal-content" style={{ borderRadius: '12px' }}>
+        <div class="modal-overlay drawer-overlay">
+          <div class="modal-content bottom-sheet" style={{ borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div class="modal-header">
               <h3 style={{ fontSize: '15px' }}>Move Deal Stage</h3>
               <button class="modal-close-btn" onClick={() => setIsQuickMoveOpen(false)}>&times;</button>
@@ -1471,8 +1747,9 @@ export default function Dashboard({ onViewCustomer }) {
 
       {/* MODAL 3: QUICK ADD NOTE */}
       {isQuickNoteOpen && selectedCustId && (
-        <div class="modal-overlay">
-          <div class="modal-content" style={{ borderRadius: '12px' }}>
+        <div class="modal-overlay drawer-overlay">
+          <div class="modal-content bottom-sheet" style={{ borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div class="modal-header">
               <h3 style={{ fontSize: '15px' }}>Add Note to Client File</h3>
               <button class="modal-close-btn" onClick={() => setIsQuickNoteOpen(false)}>&times;</button>
@@ -1502,8 +1779,9 @@ export default function Dashboard({ onViewCustomer }) {
 
       {/* MODAL 4: QUICK SCHEDULE REMINDER */}
       {isQuickReminderOpen && selectedCustId && (
-        <div class="modal-overlay">
-          <div class="modal-content" style={{ borderRadius: '12px' }}>
+        <div class="modal-overlay drawer-overlay">
+          <div class="modal-content bottom-sheet" style={{ borderRadius: '20px 20px 0 0' }}>
+            <div class="bottom-sheet-handle mobile-only"></div>
             <div class="modal-header">
               <h3 style={{ fontSize: '15px' }}>Schedule Follow-Up Reminder</h3>
               <button class="modal-close-btn" onClick={() => setIsQuickReminderOpen(false)}>&times;</button>
@@ -1549,7 +1827,7 @@ export default function Dashboard({ onViewCustomer }) {
                       class="form-input"
                       placeholder="e.g. Call at 10 AM, check if advance ready..."
                       value={quickReminderNotes}
-                      onChange={e => setNewCustDeliveryNotes(e.target.value)}
+                      onChange={e => setQuickReminderNotes(e.target.value)}
                     />
                   </div>
                 </div>

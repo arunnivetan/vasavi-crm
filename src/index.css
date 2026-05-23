@@ -58,6 +58,12 @@
 
   /* Bottom Navigation height variable for padding */
   --bottom-nav-height: 70px;
+
+  /* Standardized Mobile-First Spacing Tokens */
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
 }
 
 * {
@@ -2430,6 +2436,249 @@ a:hover {
     right: 24px;
     bottom: 24px;
     width: 380px;
+  }
+}
+
+/* ==========================================================================
+   Mobile-First Premium Utility & Component Layout Classes
+   ========================================================================== */
+
+/* Responsive visibility utilities */
+@media (max-width: 767px) {
+  .desktop-only {
+    display: none !important;
+  }
+  .mobile-only {
+    display: block !important;
+  }
+  .mobile-only-flex {
+    display: flex !important;
+  }
+  
+  /* Remove excessive gaps and paddings on mobile */
+  .page-container, main {
+    padding: var(--space-xs) var(--space-md) !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .desktop-only {
+    display: block !important;
+  }
+  .desktop-only-flex {
+    display: flex !important;
+  }
+  .mobile-only, .mobile-only-flex {
+    display: none !important;
+  }
+}
+
+/* Premium Slide-Up Bottom Drawer Sheet Overlay */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 15, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 200;
+  animation: fadeInDrawer 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border-top: 1px solid rgba(249, 115, 22, 0.25);
+  border-radius: 20px 20px 0 0;
+  padding: var(--space-md) var(--space-md) calc(var(--space-lg) + env(safe-area-inset-bottom, 16px));
+  z-index: 201;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  animation: slideUpDrawer 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Slide handle indicator at top of bottom sheets */
+.bottom-sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  margin: 0 auto var(--space-md) auto;
+}
+
+@keyframes fadeInDrawer {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUpDrawer {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* Horizontal pill-scroll lists for quick filtering */
+.mobile-pill-list {
+  display: flex;
+  gap: var(--space-xs);
+  overflow-x: auto;
+  padding: 4px 0 var(--space-xs) 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Hide scrollbars Firefox */
+}
+
+.mobile-pill-list::-webkit-scrollbar {
+  display: none; /* Hide scrollbars Chrome/Safari */
+}
+
+.filter-chip {
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-chip.active {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  color: var(--text-white);
+  box-shadow: 0 2px 10px rgba(249, 115, 22, 0.15);
+}
+
+/* Sticky floating trigger button on mobile */
+.floating-add-btn {
+  position: fixed;
+  bottom: calc(var(--bottom-nav-height) + 16px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent) 0%, #EA580C 100%);
+  border: none;
+  color: var(--text-white);
+  font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+  z-index: 98;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.floating-add-btn:active {
+  transform: scale(0.92);
+}
+
+/* Stacked modern mobile customer list card layout */
+.mobile-customer-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.crm-card-compact {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.crm-card-compact:active {
+  transform: scale(0.985);
+  background: var(--bg-card-hover);
+}
+
+.crm-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.crm-card-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-white);
+}
+
+.crm-card-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.crm-card-details {
+  background: rgba(16, 23, 38, 0.3);
+  border-radius: 10px;
+  padding: var(--space-xs) var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.crm-card-detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.crm-card-detail-label {
+  color: var(--text-muted);
+}
+
+.crm-card-detail-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.crm-card-actions {
+  display: flex;
+  justify-content: space-around;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  padding-top: var(--space-sm);
+  margin-top: 2px;
+}
+
+/* Mobile swipe pipeline mandatory alignments */
+@media (max-width: 767px) {
+  .pipeline-scroll-container {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    padding-bottom: 24px !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: var(--space-md) !important;
+  }
+  
+  .pipeline-column {
+    flex: 0 0 calc(100vw - 32px) !important;
+    scroll-snap-align: center !important;
+    min-width: unset !important;
+    margin: 0 !important;
+  }
+  
+  .pipeline-column-header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: var(--bg-card) !important;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
   }
 }
 
