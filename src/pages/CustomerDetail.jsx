@@ -375,8 +375,8 @@ export default function CustomerDetail({ customerId, onBack }) {
   return (
     <div>
       {/* HEADER SECTION: Back buttons, metadata badges, quick contact triggers */}
-      <div class="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="cust-detail-header">
+        <div className="cust-detail-title-section">
           <button class="action-btn-circle" onClick={onBack} title="Back to Dashboard">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -384,21 +384,23 @@ export default function CustomerDetail({ customerId, onBack }) {
             </svg>
           </button>
           <div>
-            <h2 style={{ fontSize: '24px', fontWeight: '800' }}>{customer.customerName}</h2>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '6px', alignItems: 'center' }}>
+            <h2 className="cust-detail-name">{customer.customerName}</h2>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center' }}>
               {/* Stage Badge */}
               <span
                 class="badge"
                 style={{
                   backgroundColor: `${stages.find(s => s.stageName === customer.stage)?.stageColor || '#3B82F6'}18`,
                   color: stages.find(s => s.stageName === customer.stage)?.stageColor || '#3B82F6',
-                  border: `1px solid ${stages.find(s => s.stageName === customer.stage)?.stageColor}40`
+                  border: `1px solid ${stages.find(s => s.stageName === customer.stage)?.stageColor}40`,
+                  fontSize: '9.5px',
+                  padding: '2px 6px'
                 }}
               >
                 {customer.stage}
               </span>
               {/* Priority Badge */}
-              <span class={`badge badge-priority-${customer.priority.toLowerCase()}`}>
+              <span class={`badge badge-priority-${customer.priority.toLowerCase()}`} style={{ fontSize: '9.5px', padding: '2px 6px' }}>
                 {customer.priority}
               </span>
             </div>
@@ -406,20 +408,20 @@ export default function CustomerDetail({ customerId, onBack }) {
         </div>
 
         {/* Quick Contact & Export shortcuts */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="cust-detail-actions-row">
           {customer.phone && (
             <>
-              <a href={`tel:${customer.phone}`} class="btn btn-success btn-sm btn-circle" style={{ width: '36px', height: '36px', borderRadius: '50%' }} title="Call Customer">
+              <a href={`tel:${customer.phone}`} class="action-btn-circle call success" style={{ textDecoration: 'none' }} title="Call Customer">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.1-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                 </svg>
               </a>
               <a
-                href={`https://wa.me/91${customer.phone}?text=Hello%20${encodeURIComponent(customer.customerName)},%20regarding%20your%20requirement%20for%20${encodeURIComponent(customer.requirement)}.`}
+                href={`https://wa.me/91${customer.phone}?text=Hello%20${encodeURIComponent(customer.customerName)},%20regarding%20your%20requirement%20for%20${encodeURIComponent(customer.requirement || '')}.`}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="btn btn-primary btn-sm btn-circle"
-                style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#25D366', boxShadow: 'none' }}
+                class="action-btn-circle whatsapp"
+                style={{ textDecoration: 'none' }}
                 title="WhatsApp Message"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -428,14 +430,12 @@ export default function CustomerDetail({ customerId, onBack }) {
               </a>
             </>
           )}
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <button class="btn btn-secondary btn-sm" onClick={() => handleExportProfile('download')} title="Download Profile PDF">
-              📄 Profile PDF
-            </button>
-            <button class="btn btn-secondary btn-sm btn-circle" style={{ width: '32px', height: '32px', borderRadius: '50%', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleExportProfile('print')} title="View / Print Profile PDF">
-              🖨️
-            </button>
-          </div>
+          <button class="action-btn-circle primary" onClick={() => handleExportProfile('download')} title="Download Profile PDF">
+            <span style={{ fontSize: '10.5px', fontWeight: 'bold' }}>PDF</span>
+          </button>
+          <button class="action-btn-circle secondary" onClick={() => handleExportProfile('print')} title="View / Print Profile PDF">
+            🖨️
+          </button>
         </div>
       </div>
 

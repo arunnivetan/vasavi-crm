@@ -46,6 +46,7 @@ export default function Dashboard({ onViewCustomer }) {
   const [isQuickMoveOpen, setIsQuickMoveOpen] = useState(false);
   const [selectedCustId, setSelectedCustId] = useState(null);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [activeActionCustomerId, setActiveActionCustomerId] = useState(null);
   
   const [isQuickNoteOpen, setIsQuickNoteOpen] = useState(false);
   const [quickNoteText, setQuickNoteText] = useState('');
@@ -1334,7 +1335,7 @@ export default function Dashboard({ onViewCustomer }) {
   }
 
   return (
-    <div>
+    <div className="dashboard-layout">
       {/* Page Title & Download Buttons */}
       <div class="page-header">
         <div class="page-title-group">
@@ -1821,57 +1822,60 @@ export default function Dashboard({ onViewCustomer }) {
                   const priorityColor = c.priority === 'High' ? 'var(--status-red)' : c.priority === 'Medium' ? 'var(--status-yellow)' : 'var(--status-green)';
                   
                   return (
-                    <div class="crm-card-compact" key={c.id}>
-                      <div class="crm-card-header" onClick={() => onViewCustomer(c.id)}>
-                        <div>
+                    <div class="crm-card-compact" key={c.id} style={{ padding: '12px 14px' }}>
+                      
+                      {/* Row 1: Name, Phone & 3-dot Action Menu */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer', flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: priorityColor }} title={`${c.priority} Priority`}></span>
-                            <span class="crm-card-title">{c.customerName || 'Unknown'}</span>
+                            <span class="crm-card-title" style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-white)' }}>{c.customerName || 'Unknown'}</span>
                           </div>
-                          {c.phone && <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>📞 {c.phone}</div>}
+                          {c.phone && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>📞 {c.phone}</div>}
                         </div>
-                        <div class="crm-card-badges">
-                          <span
-                            class="badge"
-                            style={{
-                              backgroundColor: `${stageColor}18`,
-                              color: stageColor,
-                              border: `1px solid ${stageColor}40`,
-                              fontSize: '9.5px',
-                              padding: '2px 6px'
-                            }}
-                          >
-                            {c.stage || 'New Lead'}
-                          </span>
-                        </div>
+                        
+                        <button
+                          type="button"
+                          className="action-btn-circle"
+                          style={{ width: '28px', height: '28px', minWidth: '28px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: 'var(--text-muted)' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveActionCustomerId(c.id);
+                          }}
+                        >
+                          •••
+                        </button>
                       </div>
 
-                      {/* Revenue Detail Row */}
-                      <div class="crm-card-details" onClick={() => onViewCustomer(c.id)}>
-                        <div class="crm-card-detail-row">
-                          <span class="crm-card-detail-label">Total Purchased:</span>
-                          <span class="crm-card-detail-value">₹{(c.amount || 0).toLocaleString('en-IN')}</span>
-                        </div>
-                        {c.discount > 0 && (
-                          <div class="crm-card-detail-row">
-                            <span class="crm-card-detail-label">Discount:</span>
-                            <span class="crm-card-detail-value" style={{ color: 'var(--status-green)' }}>-₹{c.discount}</span>
-                          </div>
-                        )}
-                        <div class="crm-card-detail-row">
-                          <span class="crm-card-detail-label">Advance Paid:</span>
-                          <span class="crm-card-detail-value" style={{ color: 'var(--status-green)' }}>₹{(c.advancePaid || 0).toLocaleString('en-IN')}</span>
-                        </div>
-                        {(c.pendingAmount || 0) > 0 && (
-                          <div class="crm-card-detail-row" style={{ borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '4px', marginTop: '2px' }}>
-                            <span class="crm-card-detail-label" style={{ fontWeight: '600' }}>Balance Due:</span>
-                            <span class="crm-card-detail-value" style={{ color: 'var(--status-red)' }}>₹{c.pendingAmount}</span>
-                          </div>
-                        )}
+                      {/* Row 2: Badges (Stage, Priority, Payment status) */}
+                      <div style={{ display: 'flex', gap: '6px', margin: '8px 0 6px 0', flexWrap: 'wrap' }} onClick={() => onViewCustomer(c.id)}>
+                        <span class="badge" style={{ backgroundColor: `${stageColor}15`, color: stageColor, border: `1px solid ${stageColor}30`, fontSize: '9px', padding: '1.5px 5px', borderRadius: '4px' }}>
+                          {c.stage || 'New Lead'}
+                        </span>
+                        <span class="badge" style={{ backgroundColor: `${priorityColor}15`, color: priorityColor, border: `1px solid ${priorityColor}30`, fontSize: '9px', padding: '1.5px 5px', borderRadius: '4px' }}>
+                          {c.priority || 'Medium'}
+                        </span>
+                        <span class="badge" style={{
+                          backgroundColor: c.pendingAmount === 0 ? 'rgba(16, 185, 129, 0.1)' : c.advancePaid > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                          color: c.pendingAmount === 0 ? 'var(--status-green)' : c.advancePaid > 0 ? 'var(--status-yellow)' : 'var(--status-red)',
+                          border: `1px solid ${c.pendingAmount === 0 ? 'rgba(16, 185, 129, 0.2)' : c.advancePaid > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                          fontSize: '9px',
+                          padding: '1.5px 5px',
+                          borderRadius: '4px'
+                        }}>
+                          {c.pendingAmount === 0 ? 'Paid' : c.advancePaid > 0 ? 'Partial' : 'Pending'}
+                        </span>
                       </div>
 
-                      {/* Requirement & Representative */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', padding: '0 4px' }} onClick={() => onViewCustomer(c.id)}>
+                      {/* Row 3: Financial Details */}
+                      <div style={{ display: 'flex', gap: '14px', fontSize: '11.5px', color: 'var(--text-white)', fontWeight: '600', padding: '4px 0', borderBottom: '1px dashed rgba(255,255,255,0.03)', marginBottom: '6px' }} onClick={() => onViewCustomer(c.id)}>
+                        <span>Total: ₹{(c.amount || 0).toLocaleString('en-IN')}</span>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: '400' }}>•</span>
+                        <span style={{ color: 'var(--status-green)' }}>₹{(c.advancePaid || 0).toLocaleString('en-IN')} paid</span>
+                      </div>
+
+                      {/* Row 4: Representative and Date */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', color: 'var(--text-muted)' }} onClick={() => onViewCustomer(c.id)}>
                         <span>👤 {c.assignedStaff || 'Unassigned'}</span>
                         {c.followupDate && (
                           <span style={{ color: c.followupDate < todayStr ? 'var(--status-red)' : 'inherit', fontWeight: c.followupDate < todayStr ? '700' : 'normal' }}>
@@ -1880,55 +1884,6 @@ export default function Dashboard({ onViewCustomer }) {
                         )}
                       </div>
 
-                      {/* Mobile Card Action Grid */}
-                      <div class="crm-card-actions">
-                        {c.phone && (
-                          <a href={`tel:${c.phone}`} class="action-btn-circle call" style={{ width: '32px', height: '32px' }} title="Call Customer">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.1-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                            </svg>
-                          </a>
-                        )}
-
-                        {c.phone && (
-                          <a
-                            href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName || '')},%20this%20is%20regarding%20your%20requirement.`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="action-btn-circle whatsapp"
-                            style={{ width: '32px', height: '32px' }}
-                            title="WhatsApp Message"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                            </svg>
-                          </a>
-                        )}
-
-                        <button
-                          class="action-btn-circle accent"
-                          style={{ width: '32px', height: '32px' }}
-                          onClick={() => {
-                            setSelectedCustId(c.id);
-                            setIsQuickMoveOpen(true);
-                          }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                          </svg>
-                        </button>
-
-                        <button
-                          class="action-btn-circle"
-                          style={{ width: '32px', height: '32px' }}
-                          onClick={() => {
-                            setSelectedCustId(c.id);
-                            setIsQuickNoteOpen(true);
-                          }}
-                        >
-                          📝
-                        </button>
-                      </div>
                     </div>
                   );
                 })}
@@ -2029,6 +1984,105 @@ export default function Dashboard({ onViewCustomer }) {
       >
         +
       </button>
+
+      {/* MOBILE PREMIUM ACTION MENU SHEET */}
+      {activeActionCustomerId && (() => {
+        const c = (customers || []).find(x => x.id === activeActionCustomerId);
+        if (!c) return null;
+        const stageColor = (stages || []).find(s => s.stageName === c.stage)?.stageColor || '#3B82F6';
+        return (
+          <div class="drawer-overlay" onClick={() => setActiveActionCustomerId(null)}>
+            <div class="bottom-sheet" onClick={e => e.stopPropagation()}>
+              <div class="bottom-sheet-handle"></div>
+              
+              <div style={{ padding: '0 4px 12px 4px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '14px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-white)' }}>{c.customerName}</h3>
+                <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>Quick Customer Operations</p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
+                {/* View Details */}
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  style={{ width: '100%', height: '44px', justifyContent: 'flex-start', paddingLeft: '16px', gap: '10px' }}
+                  onClick={() => {
+                    onViewCustomer(c.id);
+                    setActiveActionCustomerId(null);
+                  }}
+                >
+                  <span>👁️</span> View Full Profile
+                </button>
+
+                {/* Call */}
+                {c.phone && (
+                  <a
+                    href={`tel:${c.phone}`}
+                    class="btn btn-secondary"
+                    style={{ width: '100%', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '16px', gap: '10px', textDecoration: 'none', color: 'var(--text-white)' }}
+                    onClick={() => setActiveActionCustomerId(null)}
+                  >
+                    <span>📞</span> Call: {c.phone}
+                  </a>
+                )}
+
+                {/* WhatsApp */}
+                {c.phone && (
+                  <a
+                    href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName || '')},%20this%20is%20regarding%20your%20requirement.`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn btn-secondary"
+                    style={{ width: '100%', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '16px', gap: '10px', textDecoration: 'none', color: 'var(--text-white)' }}
+                    onClick={() => setActiveActionCustomerId(null)}
+                  >
+                    <span style={{ color: '#25D366' }}>💬</span> Chat on WhatsApp
+                  </a>
+                )}
+
+                {/* Change Stage */}
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  style={{ width: '100%', height: '44px', justifyContent: 'flex-start', paddingLeft: '16px', gap: '10px' }}
+                  onClick={() => {
+                    setSelectedCustId(c.id);
+                    setIsQuickMoveOpen(true);
+                    setActiveActionCustomerId(null);
+                  }}
+                >
+                  <span style={{ color: stageColor }}>⚡</span> Move Pipeline Stage
+                </button>
+
+                {/* Add Note */}
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  style={{ width: '100%', height: '44px', justifyContent: 'flex-start', paddingLeft: '16px', gap: '10px' }}
+                  onClick={() => {
+                    setSelectedCustId(c.id);
+                    setIsQuickNoteOpen(true);
+                    setActiveActionCustomerId(null);
+                  }}
+                >
+                  <span>📝</span> Add Quick Executive Note
+                </button>
+
+                {/* Close Button */}
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  style={{ width: '100%', height: '44px', marginTop: '6px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-white)', border: 'none' }}
+                  onClick={() => setActiveActionCustomerId(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
       {/* --- POPUPS & MODALS OVERLAYS --- */}
 
