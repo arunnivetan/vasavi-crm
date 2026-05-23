@@ -69,9 +69,12 @@ export default function CustomerDetail({ customerId, onBack }) {
   const [noteInput, setNoteInput] = useState('');
 
   // Payment form state
-  const [payAmount, setPayAmount] = useState('');
-  const [payMode, setPayMode] = useState('Cash');
-  const [payNote, setPayNote] = useState('');
+  const [editTotalPurchased, setEditTotalPurchased] = useState(0);
+  const [editPaymentDiscount, setEditPaymentDiscount] = useState(0);
+  const [editAdvancePaid, setEditAdvancePaid] = useState(0);
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editPaymentNotes, setEditPaymentNotes] = useState('');
+  const [editPaymentMode, setEditPaymentMode] = useState('Cash');
 
   // Edit details form state
   const [editName, setEditName] = useState('');
@@ -222,13 +225,56 @@ export default function CustomerDetail({ customerId, onBack }) {
     setIsEditInfoOpen(false);
   };
 
-  const handleUpdatePaymentSubmit = (e) => {
+  // Open and pre-initialize edit payment modal
+  const openPaymentModal = () => {
+    const initialPurchased = customer.subtotal || customer.amount || 0;
+    setEditTotalPurchased(initialPurchased);
+    setEditPaymentDiscount(customer.discount || 0);
+    setEditAdvancePaid(customer.advancePaid || 0);
+    setEditDueDate(customer.followupDate || '');
+    setEditPaymentNotes('');
+    setEditPaymentMode(customerPayments[0]?.paymentMode || 'Cash');
+    setIsUpdatePayOpen(true);
+  };
+
+  const handleUpdatePaymentSubmit = async (e) => {
     e.preventDefault();
-    if (!payAmount) return;
-    addPaymentTransaction(customerId, parseFloat(payAmount), payMode, payNote);
-    setPayAmount('');
-    setPayNote('');
-    setIsUpdatePayOpen(false);
+    
+    const purchased = parseFloat(editTotalPurchased || 0);
+    const discount = parseFloat(editPaymentDiscount || 0);
+    const finalBill = purchased - discount;
+    const advance = parseFloat(editAdvancePaid || 0);
+    const pending = finalBill - advance;
+    
+    let paymentStatus = 'Pending';
+    if (advance > 0) {
+      paymentStatus = pending <= 0 ? 'Paid' : 'Partial';
+    }
+
+    try {
+      // Calculate difference in advancePaid to record payment transaction if needed
+      const diff = advance - (customer.advancePaid || 0);
+      if (diff > 0) {
+        // Record payment installment ledger transaction for transparency
+        await addPaymentTransaction(customerId, diff, editPaymentMode, editPaymentNotes || 'Installment via payment workspace edit');
+      }
+
+      // Update customer record
+      await editCustomer(customerId, {
+        subtotal: purchased,
+        discount: discount,
+        amount: finalBill,
+        advancePaid: advance,
+        pendingAmount: pending,
+        paymentStatus: paymentStatus,
+        followupDate: editDueDate
+      });
+
+      setIsUpdatePayOpen(false);
+    } catch (err) {
+      console.error('[CustomerDetail] Failed to save payment details:', err);
+      alert('Failed to save payment: ' + (err?.message || err));
+    }
   };
 
   const handleAddNoteSubmit = (e) => {
@@ -636,7 +682,7 @@ export default function CustomerDetail({ customerId, onBack }) {
                   class="action-btn-circle"
                   style={{ width: '22px', height: '22px' }}
                   title="Record Collection"
-                  onClick={() => setIsUpdatePayOpen(true)}
+                  onClick={() => openPaymentModal()}
                 >
                   +
                 </button>
@@ -1424,60 +1470,264 @@ export default function CustomerDetail({ customerId, onBack }) {
       {/* MODAL 2: UPDATE PAYMENTS TRANSACTION */}
       {isUpdatePayOpen && (
         <div class="modal-overlay">
-          <div class="modal-content">
+          <div class="modal-content" style={{ maxWidth: '780px', width: '100%' }}>
             <div class="modal-header">
-              <h3>Record Payment Installment</h3>
+              <h3>Edit Payment Details</h3>
               <button class="modal-close-btn" onClick={() => setIsUpdatePayOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleUpdatePaymentSubmit}>
               <div class="modal-body">
-                <div class="form-grid">
-                  <p style={{ fontSize: '13.5px' }}>
-                    Record collection for: <strong>{customer.customerName}</strong>
-                  </p>
+                
+                {/* ERP Two Column Layout */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '24px', alignItems: 'start' }}>
+                  
+                  {/* Left Column: Input Form */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    
+                    {/* Total Purchased Amount */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                        Total Purchased Amount (₹)
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="number"
+                          class="form-input"
+                          style={{ flex: 1 }}
+                          value={editTotalPurchased}
+                          onChange={e => setEditTotalPurchased(parseFloat(e.target.value) || 0)}
+                          min="0"
+                          required
+                        />
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--accent)', minWidth: '60px' }}>
+                          ₹{editTotalPurchased.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>Collection Amount (₹) *</label>
-                    <input
-                      type="number"
-                      class="form-input"
-                      placeholder="e.g. 5000"
-                      value={payAmount}
-                      onChange={e => setPayAmount(e.target.value)}
-                      max={customer.pendingAmount}
-                      min="1"
-                      required
-                    />
-                    <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
-                      Max collectible balance remaining: <strong>₹{customer.pendingAmount}</strong>
-                    </span>
+                    {/* Discount / Amount Reduced */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                        Discount / Amount Reduced (₹)
+                      </label>
+                      <input
+                        type="number"
+                        class="form-input"
+                        value={editPaymentDiscount}
+                        onChange={e => setEditPaymentDiscount(parseFloat(e.target.value) || 0)}
+                        min="0"
+                        max={editTotalPurchased}
+                        required
+                      />
+                    </div>
+
+                    {/* Final Bill Amount (Auto) */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                        Final Bill Amount (Auto)
+                      </label>
+                      <div style={{
+                        background: 'rgba(21, 31, 50, 0.45)',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <strong style={{ fontSize: '16px', color: 'var(--text-white)' }}>
+                          ₹{(editTotalPurchased - editPaymentDiscount).toLocaleString('en-IN')}
+                        </strong>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          (₹{editTotalPurchased} − ₹{editPaymentDiscount})
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Advance Paid */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                        Advance Paid (₹)
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="number"
+                          class="form-input"
+                          style={{ flex: 1 }}
+                          value={editAdvancePaid}
+                          onChange={e => setEditAdvancePaid(parseFloat(e.target.value) || 0)}
+                          min="0"
+                          max={editTotalPurchased - editPaymentDiscount}
+                          required
+                        />
+                        <span style={{ fontSize: '12px', color: 'var(--status-green)', fontWeight: '600', minWidth: '80px' }}>
+                          ₹{editAdvancePaid.toLocaleString('en-IN')} received
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Pending Balance (Auto) */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                        Pending Balance (Auto)
+                      </label>
+                      <div style={{
+                        background: 'rgba(21, 31, 50, 0.45)',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        padding: '10px 12px',
+                        borderRadius: '8px'
+                      }}>
+                        <strong style={{ fontSize: '16px', color: 'var(--status-red)' }}>
+                          ₹{Math.max(0, editTotalPurchased - editPaymentDiscount - editAdvancePaid).toLocaleString('en-IN')}
+                        </strong>
+                      </div>
+                    </div>
+
+                    {/* Payment Mode & Due Date */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                          Payment Mode
+                        </label>
+                        <select class="form-input" value={editPaymentMode} onChange={e => setEditPaymentMode(e.target.value)}>
+                          <option value="Cash">💵 Cash</option>
+                          <option value="GPay">📱 GPay / UPI</option>
+                          <option value="Bank Transfer">🏦 Bank Transfer</option>
+                          <option value="Cheque">✍️ Cheque</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                          Due Date
+                        </label>
+                        <input
+                          type="date"
+                          class="form-input"
+                          value={editDueDate}
+                          onChange={e => setEditDueDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Payment Notes */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                        Payment Notes
+                      </label>
+                      <textarea
+                        class="form-input"
+                        rows={2}
+                        style={{ resize: 'vertical', minHeight: '60px' }}
+                        placeholder="e.g. Discount given for bulk order. Balance after delivery..."
+                        value={editPaymentNotes}
+                        onChange={e => setEditPaymentNotes(e.target.value)}
+                      />
+                    </div>
+
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>Payment Mode</label>
-                    <select class="form-input" value={payMode} onChange={e => setPayMode(e.target.value)}>
-                      <option value="Cash">💵 Cash</option>
-                      <option value="GPay">📱 GPay / UPI</option>
-                      <option value="Bank Transfer">🏦 Bank NEFT/RTGS</option>
-                      <option value="Cheque">✍️ Cheque</option>
-                    </select>
+                  {/* Right Column: Premium Sidebar Summary Card */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(21, 31, 50, 0.7) 0%, rgba(15, 23, 38, 0.9) 100%)',
+                    border: '1px solid rgba(249, 115, 22, 0.15)',
+                    borderRadius: '12px',
+                    padding: '18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+                    height: '100%'
+                  }}>
+                    <h4 style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      letterSpacing: '0.8px',
+                      color: 'var(--accent)',
+                      textTransform: 'uppercase',
+                      borderBottom: '1px solid rgba(255,255,255,0.06)',
+                      paddingBottom: '8px',
+                      margin: 0
+                    }}>
+                      Payment Summary
+                    </h4>
+
+                    {/* Cost ledger item lines */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Total Purchased</span>
+                        <span style={{ fontWeight: '700', color: 'var(--text-white)' }}>
+                          ₹{editTotalPurchased.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Discount</span>
+                        <span style={{ fontWeight: '700', color: 'var(--status-green)' }}>
+                          −₹{editPaymentDiscount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '13.5px',
+                        borderTop: '1px solid rgba(255,255,255,0.05)',
+                        paddingTop: '10px'
+                      }}>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>Final Bill</span>
+                        <span style={{ fontWeight: '800', color: 'var(--accent)' }}>
+                          ₹{(editTotalPurchased - editPaymentDiscount).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Advance Paid</span>
+                        <span style={{ fontWeight: '700', color: 'var(--status-green)' }}>
+                          ₹{editAdvancePaid.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '14px',
+                        borderTop: '1px solid rgba(255,255,255,0.08)',
+                        paddingTop: '10px',
+                        marginTop: '4px'
+                      }}>
+                        <span style={{ color: 'var(--text-white)', fontWeight: '700' }}>Balance Due</span>
+                        <span style={{ fontWeight: '900', color: 'var(--status-red)' }}>
+                          ₹{Math.max(0, editTotalPurchased - editPaymentDiscount - editAdvancePaid).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Status Badge inside summary */}
+                    <div style={{
+                      marginTop: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'rgba(16, 23, 38, 0.4)',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.03)'
+                    }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Payment Status:</span>
+                      <span className={`badge badge-payment-${
+                        editAdvancePaid === 0 ? 'pending' : (editTotalPurchased - editPaymentDiscount - editAdvancePaid <= 0 ? 'paid' : 'partial')
+                      }`}>
+                        {editAdvancePaid === 0 ? 'Pending' : (editTotalPurchased - editPaymentDiscount - editAdvancePaid <= 0 ? 'Paid' : 'Partial')}
+                      </span>
+                    </div>
+
                   </div>
 
-                  <div class="form-group-full">
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>Payment Notes</label>
-                    <input
-                      type="text"
-                      class="form-input"
-                      placeholder="e.g. Received via GPay from contractor Suresh..."
-                      value={payNote}
-                      onChange={e => setPayNote(e.target.value)}
-                    />
-                  </div>
                 </div>
+
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onClick={() => setIsUpdatePayOpen(false)}>Cancel</button>
-                <button type="submit" class="btn btn-primary">Record Installment</button>
+                <button type="submit" class="btn class-btn" style={{ background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)', border: 'none', color: 'var(--text-white)', padding: '8px 16px', borderRadius: '6px', fontWeight: '700', boxShadow: '0 4px 14px rgba(249, 115, 22, 0.3)', cursor: 'pointer' }}>
+                  Save Payment
+                </button>
               </div>
             </form>
           </div>
