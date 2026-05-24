@@ -61,6 +61,7 @@ export default function CustomerDetail({ customerId, onBack }) {
   const [isAddReminderOpen, setIsAddReminderOpen] = useState(false);
   const [isSnoozeOpen, setIsSnoozeOpen] = useState(false);
   const [activeReminderId, setActiveReminderId] = useState(null);
+  const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
   
   // Lightbox Preview Image state
   const [lightboxImage, setLightboxImage] = useState(null);
@@ -113,27 +114,7 @@ export default function CustomerDetail({ customerId, onBack }) {
   const editCompletedItemsCount = editItems.filter(item => item.status === 'Completed' || item.status === 'Installed').length;
   const editCompletionPercent = editTotalItemsCount > 0 ? Math.round((editCompletedItemsCount / editTotalItemsCount) * 100) : 0;
 
-  // AI Suggestion Assistant for edit modal
-  const getEditAISuggestions = () => {
-    const products = editItems.map(i => (i.productName || '').toLowerCase());
-    let recommendations = [];
-    if (products.some(p => p.includes('plywood') || p.includes('ply'))) {
-      recommendations.push("Detected plywood usage. We recommend soft-close hydraulic hinges, 1.2mm anti-termite backing laminates, and anti-rust heavy-duty fasteners for anti-gravity wall mounting stability.");
-    }
-    if (products.some(p => p.includes('hinge') || p.includes('hinges') || p.includes('channel'))) {
-      recommendations.push("Hardware components active. Ensure standard alignment templates and matching hydraulic soft-close damping buffers are included.");
-    }
-    if (editItems.some(item => item.category === 'Automation')) {
-      recommendations.push("Smart Automation component added. We recommend Zigbee-compatible decentralized mesh bridges, high-grade shielded low-voltage cable paths, and touch control panels.");
-    }
-    if (editItems.some(item => item.category === 'Installation' || item.category === 'Labor')) {
-      recommendations.push("Premium installation service scheduled. Recommend on-site alignment jigs and precision laser leveling modules to eliminate spatial gravity deviation.");
-    }
-    if (recommendations.length === 0) {
-      return "Awaiting modular item configuration to run real-time hardware recommendations & predictive material lists...";
-    }
-    return recommendations.join(" ");
-  };
+
 
   // --- COSTING TABLE HANDLERS FOR EDIT ---
   const handleEditItemChange = (index, field, value) => {
@@ -205,6 +186,14 @@ export default function CustomerDetail({ customerId, onBack }) {
     e.preventDefault();
     const activeItems = editItems.filter(item => item.productName.trim() !== '');
 
+    const advance = parseFloat(editAdvancePaid || 0);
+    const pending = editGrandTotal - advance;
+    
+    let paymentStatus = 'Pending';
+    if (advance > 0) {
+      paymentStatus = pending <= 0 ? 'Paid' : 'Partial';
+    }
+
     editCustomer(customerId, {
       customerName: editName,
       phone: editPhone,
@@ -220,7 +209,10 @@ export default function CustomerDetail({ customerId, onBack }) {
       discount: editDiscountVal,
       taxPercent: editTaxPercentVal,
       taxAmount: editTaxAmount,
-      amount: editGrandTotal
+      amount: editGrandTotal,
+      advancePaid: advance,
+      pendingAmount: pending,
+      paymentStatus: paymentStatus
     });
     setIsEditInfoOpen(false);
   };
@@ -372,69 +364,86 @@ export default function CustomerDetail({ customerId, onBack }) {
     Miscellaneous: customerItems.filter(i => i.category === 'Miscellaneous').reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0),
   };
 
+  const billTag = (customer.tags || []).find(t => t.startsWith('BILL:'));
+  const billNumber = billTag ? billTag.split(':')[1] : 'No Bill#';
+
   return (
     <div>
       {/* HEADER SECTION: Back buttons, metadata badges, quick contact triggers */}
-      <div className="cust-detail-header">
-        <div className="cust-detail-title-section">
-          <button class="action-btn-circle" onClick={onBack} title="Back to Dashboard">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
-          </button>
-          <div>
-            <h2 className="cust-detail-name">{customer.customerName}</h2>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center' }}>
-              {/* Stage Badge */}
-              <span
-                class="badge"
-                style={{
-                  backgroundColor: `${stages.find(s => s.stageName === customer.stage)?.stageColor || '#3B82F6'}18`,
-                  color: stages.find(s => s.stageName === customer.stage)?.stageColor || '#3B82F6',
-                  border: `1px solid ${stages.find(s => s.stageName === customer.stage)?.stageColor}40`,
-                  fontSize: '9.5px',
-                  padding: '2px 6px'
-                }}
-              >
-                {customer.stage}
-              </span>
-              {/* Priority Badge */}
-              <span class={`badge badge-priority-${customer.priority.toLowerCase()}`} style={{ fontSize: '9.5px', padding: '2px 6px' }}>
-                {customer.priority}
-              </span>
-            </div>
+      <div className="cust-detail-header" style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)', marginBottom: '20px' }}>
+        {/* ROW 1 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button className="action-btn-circle" onClick={onBack} title="Back to Dashboard">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </button>
+            <h2 className="cust-detail-name" style={{ margin: 0, fontSize: '20px', fontWeight: '800' }}>{customer.customerName}</h2>
           </div>
-        </div>
-
-        {/* Quick Contact & Export shortcuts */}
-        <div className="cust-detail-actions-row">
-          {customer.phone && (
-            <>
-              <a href={`tel:${customer.phone}`} class="action-btn-circle call success" style={{ textDecoration: 'none' }} title="Call Customer">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {customer.phone && (
+              <a href={`tel:${customer.phone}`} className="action-btn-circle call success" style={{ textDecoration: 'none' }} title="Call Customer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.1-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                 </svg>
               </a>
-              <a
-                href={`https://wa.me/91${customer.phone}?text=Hello%20${encodeURIComponent(customer.customerName)},%20regarding%20your%20requirement%20for%20${encodeURIComponent(customer.requirement || '')}.`}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="action-btn-circle whatsapp"
-                style={{ textDecoration: 'none' }}
-                title="WhatsApp Message"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-                </svg>
-              </a>
-            </>
-          )}
-          <button class="action-btn-circle primary" onClick={() => handleExportProfile('download')} title="Download Profile PDF">
-            <span style={{ fontSize: '10.5px', fontWeight: 'bold' }}>PDF</span>
+            )}
+            <div className="action-btn-circle">...</div>
+          </div>
+        </div>
+
+        {/* ROW 2 */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span
+            className="badge"
+            style={{
+              backgroundColor: `${stages.find(s => s.stageName === customer.stage)?.stageColor || '#3B82F6'}18`,
+              color: stages.find(s => s.stageName === customer.stage)?.stageColor || '#3B82F6',
+              border: `1px solid ${stages.find(s => s.stageName === customer.stage)?.stageColor}40`,
+              fontSize: '11px',
+              padding: '4px 8px',
+              fontWeight: '600'
+            }}
+          >
+            {customer.stage}
+          </span>
+          <span className={`badge badge-priority-${customer.priority.toLowerCase()}`} style={{ fontSize: '11px', padding: '4px 8px', fontWeight: '600' }}>
+            {customer.priority}
+          </span>
+          <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', padding: '4px 8px', fontWeight: '600' }}>
+            {billNumber}
+          </span>
+        </div>
+
+        {/* ROW 3 */}
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => setIsPDFPreviewOpen(true)} style={{ flex: 1, padding: '8px', display: 'flex', justifyContent: 'center', gap: '6px' }}>
+            <span>📄</span> PDF Preview
           </button>
-          <button class="action-btn-circle secondary" onClick={() => handleExportProfile('print')} title="View / Print Profile PDF">
-            🖨️
+          <button className="btn btn-secondary btn-sm" onClick={() => handleExportProfile('print')} style={{ padding: '8px 14px' }} title="Print Profile">
+            🖨️ Print
+          </button>
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ padding: '8px 14px' }}
+            onClick={() => {
+              setEditName(customer.customerName);
+              setEditPhone(customer.phone);
+              setEditAddress(customer.address);
+              setEditReq(customer.requirement);
+              setEditProjType(customer.projectType);
+              setEditStaff(customer.assignedStaff);
+              setEditPriority(customer.priority);
+              setEditItems(customer.items && customer.items.length > 0 ? customer.items : [{ productName: '', qty: 1, unit: 'Sheets', rate: 0, total: 0 }]);
+              setEditDiscount(customer.discount !== undefined ? customer.discount : '');
+              setEditTaxPercent(customer.taxPercent !== undefined ? customer.taxPercent.toString() : '18');
+              setEditAdvancePaid(customer.advancePaid !== undefined ? customer.advancePaid : '');
+              setIsEditInfoOpen(true);
+            }}
+          >
+            ✎ Edit
           </button>
         </div>
       </div>
@@ -448,26 +457,6 @@ export default function CustomerDetail({ customerId, onBack }) {
           <div class="detail-card">
             <div class="detail-card-title">
               CUSTOMER INFO
-              <button
-                class="action-btn-circle"
-                style={{ width: '22px', height: '22px' }}
-                title="Edit details"
-                onClick={() => {
-                  setEditName(customer.customerName);
-                  setEditPhone(customer.phone);
-                  setEditAddress(customer.address);
-                  setEditReq(customer.requirement);
-                  setEditProjType(customer.projectType);
-                  setEditStaff(customer.assignedStaff);
-                  setEditPriority(customer.priority);
-                  setEditItems(customer.items && customer.items.length > 0 ? customer.items : [{ productName: '', qty: 1, unit: 'Sheets', rate: 0, total: 0 }]);
-                  setEditDiscount(customer.discount !== undefined ? customer.discount : '');
-                  setEditTaxPercent(customer.taxPercent !== undefined ? customer.taxPercent.toString() : '18');
-                  setIsEditInfoOpen(true);
-                }}
-              >
-                ✎
-              </button>
             </div>
             
             <div class="info-list">
@@ -488,7 +477,6 @@ export default function CustomerDetail({ customerId, onBack }) {
                     <span class="info-label">ITEMS & MATERIALS</span>
                   </div>
                 </div>
-                {customer.items && customer.items.length > 0 ? (
                   <div style={{
                     marginTop: '8px',
                     display: 'flex',
@@ -496,75 +484,6 @@ export default function CustomerDetail({ customerId, onBack }) {
                     gap: '10px',
                     width: '100%'
                   }}>
-                    {/* Glowing completion progress bar */}
-                    <div style={{
-                      backgroundColor: 'rgba(21, 31, 50, 0.4)',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                          PROJECT COMPLETION
-                        </span>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: '800', color: 'var(--accent)' }}>
-                          {viewCompletionPercent}%
-                        </span>
-                      </div>
-                      <div className="ag-progress-bar-bg" style={{ height: '6px' }}>
-                        <div className="ag-progress-bar-fill" style={{ width: `${viewCompletionPercent}%` }}></div>
-                      </div>
-                    </div>
-
-                    {/* Category Expense Splits */}
-                    <div style={{
-                      backgroundColor: 'rgba(21, 31, 50, 0.4)',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px'
-                    }}>
-                      <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-white)', textTransform: 'uppercase', letterSpacing: '0.3px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
-                        WORK TYPE BREAKDOWN
-                      </span>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
-                        {viewCatSubtotals.Material > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 6px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
-                            <span style={{ color: '#90CDF4', fontWeight: '500' }}>Material:</span>
-                            <span style={{ fontWeight: '700' }}>₹{viewCatSubtotals.Material.toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                        {viewCatSubtotals.Installation > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 6px', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
-                            <span style={{ color: '#68D391', fontWeight: '500' }}>Install:</span>
-                            <span style={{ fontWeight: '700' }}>₹{viewCatSubtotals.Installation.toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                        {viewCatSubtotals.Automation > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 6px', background: 'rgba(168, 85, 247, 0.08)', borderRadius: '4px', border: '1px solid rgba(168, 85, 247, 0.15)' }}>
-                            <span style={{ color: '#D6BCFA', fontWeight: '500' }}>Automation:</span>
-                            <span style={{ fontWeight: '700' }}>₹{viewCatSubtotals.Automation.toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                        {viewCatSubtotals.Labor > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 6px', background: 'rgba(236, 72, 153, 0.08)', borderRadius: '4px', border: '1px solid rgba(236, 72, 153, 0.15)' }}>
-                            <span style={{ color: '#FBB6CE', fontWeight: '500' }}>Labor:</span>
-                            <span style={{ fontWeight: '700' }}>₹{viewCatSubtotals.Labor.toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                        {viewCatSubtotals.Miscellaneous > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 6px', background: 'rgba(107, 114, 128, 0.08)', borderRadius: '4px', border: '1px solid rgba(107, 114, 128, 0.15)' }}>
-                            <span style={{ color: '#CBD5E0', fontWeight: '500' }}>Misc:</span>
-                            <span style={{ fontWeight: '700' }}>₹{viewCatSubtotals.Miscellaneous.toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
                     {/* Cost items listing */}
                     <div style={{
                       display: 'flex',
@@ -1101,65 +1020,7 @@ export default function CustomerDetail({ customerId, onBack }) {
                       </div>
                     </div>
 
-                    {/* Widgets Section: Completion & AI Assistant */}
-                    <div className="ag-dashboard-widgets">
-                      {/* Project Completion Tracker */}
-                      <div className="ag-widget-card">
-                        <div className="ag-widget-title">
-                          <span>📊</span> Modular Completion Status
-                        </div>
-                        <div style={{ padding: '4px 0' }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            Completed & Installed Modules ratio:
-                          </span>
-                          <div className="ag-progress-bar-container">
-                            <div className="ag-progress-bar-bg">
-                              <div className="ag-progress-bar-fill" style={{ width: `${editCompletionPercent}%` }}></div>
-                            </div>
-                            <span className="ag-progress-pct">{editCompletionPercent}%</span>
-                          </div>
-                        </div>
-                      </div>
 
-                      {/* AI suggestions */}
-                      <div className="ag-widget-card ag-ai-assist">
-                        <div className="ag-widget-title" style={{ borderBottomColor: 'rgba(139, 92, 246, 0.15)' }}>
-                          <span>🔮</span> Anti-Gravity AI Suggestion Box
-                        </div>
-                        <div className="ag-ai-bubble">
-                          {getEditAISuggestions()}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Category Expense Split Workspace */}
-                    <div className="ag-widget-card" style={{ marginBottom: '20px', padding: '12px 18px' }}>
-                      <div className="ag-widget-title" style={{ marginBottom: '10px' }}>
-                        <span>💰</span> Category Expense Workspace splits
-                      </div>
-                      <div className="ag-expenses-grid">
-                        <div className="ag-expense-block">
-                          <span className="ag-expense-lbl">Material</span>
-                          <span className="ag-expense-val">₹{editCatSubtotals.Material.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="ag-expense-block">
-                          <span className="ag-expense-lbl">Installation</span>
-                          <span className="ag-expense-val">₹{editCatSubtotals.Installation.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="ag-expense-block">
-                          <span className="ag-expense-lbl">Automation</span>
-                          <span className="ag-expense-val">₹{editCatSubtotals.Automation.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="ag-expense-block">
-                          <span className="ag-expense-lbl">Labor</span>
-                          <span className="ag-expense-val">₹{editCatSubtotals.Labor.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="ag-expense-block">
-                          <span className="ag-expense-lbl">Misc</span>
-                          <span className="ag-expense-val">₹{editCatSubtotals.Miscellaneous.toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-                    </div>
 
                     {/* Glassmorphic Item Deck grid */}
                     <div className="ag-card-deck">
@@ -1373,6 +1234,20 @@ export default function CustomerDetail({ customerId, onBack }) {
                         />
                       </div>
 
+                      {/* Advance Paid input */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>
+                          Advance Paid Amount (₹)
+                        </label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          placeholder="Advance Paid"
+                          value={editAdvancePaid}
+                          onChange={e => setEditAdvancePaid(e.target.value)}
+                        />
+                      </div>
+
                       {/* FINAL BILL AMOUNT banner */}
                       <div style={{ gridColumn: '1 / -1' }}>
                         <label style={{ display: 'block', fontSize: '9px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -1392,7 +1267,7 @@ export default function CustomerDetail({ customerId, onBack }) {
                           Pending Balance Outstanding (Auto)
                         </label>
                         <div className="ag-billing-banner-red">
-                          <span className="ag-billing-banner-red-text">⚠️ ₹{Math.max(0, editGrandTotal - (customer.advancePaid || 0)).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                          <span className="ag-billing-banner-red-text">⚠️ ₹{Math.max(0, editGrandTotal - parseFloat(editAdvancePaid || 0)).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500', marginLeft: '10px' }}>
                             (Outstanding balance due)
                           </span>
@@ -1853,6 +1728,108 @@ export default function CustomerDetail({ customerId, onBack }) {
                 <button type="submit" class="btn btn-primary">Snooze Alert</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 6: PDF PREVIEW MODAL */}
+      {isPDFPreviewOpen && (
+        <div className="modal-overlay drawer-overlay">
+          <div className="modal-content" style={{ maxWidth: '700px', borderRadius: '16px', backgroundColor: 'var(--bg-main)', overflow: 'hidden' }}>
+            <div className="modal-header" style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>📄 Document Preview</h3>
+              <button className="modal-close-btn" onClick={() => setIsPDFPreviewOpen(false)}>&times;</button>
+            </div>
+            <div className="modal-body" style={{ padding: '24px', maxHeight: '60vh', overflowY: 'auto' }}>
+              {/* Preview Content */}
+              <div style={{ padding: '30px', backgroundColor: '#fff', color: '#000', borderRadius: '8px', border: '1px solid #ddd' }}>
+                <div style={{ textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #eee', paddingBottom: '20px' }}>
+                  <h1 style={{ margin: '0 0 10px 0', fontSize: '24px', color: '#2563eb' }}>VASAVI CRM</h1>
+                  <h2 style={{ margin: '0', fontSize: '18px', color: '#333' }}>CUSTOMER PROFILE REPORT</h2>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
+                  <div>
+                    <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>CUSTOMER NAME</p>
+                    <p style={{ margin: 0, fontWeight: 'bold', fontSize: '16px' }}>{customer.customerName}</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>BILL NUMBER</p>
+                    <p style={{ margin: 0, fontWeight: 'bold', fontSize: '16px' }}>{billNumber}</p>
+                  </div>
+                  <div>
+                    <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>CONTACT</p>
+                    <p style={{ margin: 0 }}>{customer.phone || 'N/A'}</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>DATE</p>
+                    <p style={{ margin: 0 }}>{new Date().toLocaleDateString('en-IN')}</p>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '30px' }}>
+                  <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '8px', fontSize: '14px', color: '#333' }}>MATERIALS & SERVICES</h3>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', color: '#64748b' }}>
+                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Item Description</th>
+                        <th style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Qty</th>
+                        <th style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Rate</th>
+                        <th style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(customer.items || []).map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ padding: '10px', borderBottom: '1px solid #f1f5f9' }}>{item.productName}</td>
+                          <td style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #f1f5f9' }}>{item.qty}</td>
+                          <td style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #f1f5f9' }}>₹{(parseFloat(item.rate) || 0).toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #f1f5f9', fontWeight: 'bold' }}>₹{(parseFloat(item.total) || 0).toLocaleString('en-IN')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ width: '300px', backgroundColor: '#f8fafc', padding: '20px', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '13px' }}>
+                      <span style={{ color: '#64748b' }}>Subtotal:</span>
+                      <span style={{ fontWeight: 'bold' }}>₹{(customer.subtotal || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    {customer.discount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '13px' }}>
+                        <span style={{ color: '#64748b' }}>Discount:</span>
+                        <span style={{ fontWeight: 'bold', color: '#16a34a' }}>-₹{(customer.discount || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    {customer.taxAmount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '13px' }}>
+                        <span style={{ color: '#64748b' }}>GST ({customer.taxPercent}%):</span>
+                        <span style={{ fontWeight: 'bold' }}>+₹{(customer.taxAmount || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', fontSize: '16px' }}>
+                      <span style={{ fontWeight: 'bold', color: '#0f172a' }}>Final Amount:</span>
+                      <span style={{ fontWeight: '900', color: '#2563eb' }}>₹{(customer.amount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '13px' }}>
+                      <span style={{ color: '#64748b' }}>Advance Paid:</span>
+                      <span style={{ fontWeight: 'bold', color: '#16a34a' }}>₹{(customer.advancePaid || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', fontSize: '14px' }}>
+                      <span style={{ fontWeight: 'bold', color: '#dc2626' }}>Balance Due:</span>
+                      <span style={{ fontWeight: 'bold', color: '#dc2626' }}>₹{Math.max(0, (customer.amount || 0) - (customer.advancePaid || 0)).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer" style={{ padding: '20px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button className="btn btn-secondary" onClick={() => setIsPDFPreviewOpen(false)}>Cancel</button>
+              <button className="btn btn-secondary" onClick={() => { handleExportProfile('print'); setIsPDFPreviewOpen(false); }}>🖨️ Print Document</button>
+              <button className="btn btn-primary" onClick={() => { handleExportProfile('download'); setIsPDFPreviewOpen(false); }}>⬇️ Download PDF</button>
+            </div>
           </div>
         </div>
       )}

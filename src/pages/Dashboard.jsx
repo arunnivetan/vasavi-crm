@@ -86,6 +86,12 @@ export default function Dashboard({ onViewCustomer }) {
   // Notes state inside Create Workspace
   const [createWorkspaceNote, setCreateWorkspaceNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   if (isLoading) {
     return (
@@ -239,12 +245,29 @@ export default function Dashboard({ onViewCustomer }) {
   // --- FORM HANDLERS ---
   const handleCreateCustomer = async (e) => {
     if (e) e.preventDefault();
-    if (!newCustName.trim()) return;
+    if (!newCustName.trim()) {
+      showToast('Customer Name is required.', 'error');
+      return;
+    }
 
     const activeItems = newCustItems.filter(item => item?.productName?.trim() !== '');
     setIsSaving(true);
 
     try {
+      // Generate Unique Bill Number
+      const existingCustomers = customers || [];
+      let maxBillNumber = 0;
+      existingCustomers.forEach(c => {
+        const billTag = (c.tags || []).find(t => t.startsWith('BILL:SVP-'));
+        if (billTag) {
+          const numStr = billTag.split('-')[2];
+          const num = parseInt(numStr, 10);
+          if (!isNaN(num) && num > maxBillNumber) maxBillNumber = num;
+        }
+      });
+      const nextBillNumber = maxBillNumber + 1;
+      const formattedBillNumber = `SVP-${new Date().getFullYear()}-${nextBillNumber.toString().padStart(4, '0')}`;
+
       await addCustomer({
         customerName: newCustName,
         phone: newCustPhone,
@@ -262,8 +285,11 @@ export default function Dashboard({ onViewCustomer }) {
         amount: grandTotal,
         advancePaid: advancePaidVal,
         paymentMode: newCustPayMode,
-        followupDate: newCustFollowupDate
+        followupDate: newCustFollowupDate,
+        tags: [`BILL:${formattedBillNumber}`]
       });
+
+      showToast('Customer file created successfully!', 'success');
 
       // Reset Form
       setNewCustName('');
@@ -285,7 +311,7 @@ export default function Dashboard({ onViewCustomer }) {
       setIsAddModalOpen(false);
     } catch (err) {
       console.error('[Dashboard] Error completing client file creation:', err);
-      alert(`Failed to create customer file: ${err?.message || err}`);
+      showToast(`Failed to create customer file: ${err?.message || err}`, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -1071,53 +1097,19 @@ export default function Dashboard({ onViewCustomer }) {
               </div>
             </div>
 
-            {/* Card 4: Notes & File Uploads */}
+            {/* Card 4: Internal Notes */}
             <div className="erp-card">
-              <div className="erp-card-title">Notes & File Uploads</div>
+              <div className="erp-card-title">Internal Executive Notes</div>
               
-              <div className="erp-form-grid-notes">
-                {/* Internal notes */}
-                <div>
-                  <label className="ag-form-label">Internal Executive Notes</label>
-                  <textarea
-                    className="erp-input-inline"
-                    rows={6}
-                    style={{ resize: 'none', padding: '8px 12px' }}
-                    placeholder="Discussed requirements, customer requested Marine Grade Plywood and anti-rust hinges. Follow up when stock arrives..."
-                    value={createWorkspaceNote}
-                    onChange={e => setCreateWorkspaceNote(e.target.value)}
-                  />
-                </div>
-
-                {/* File Upload details */}
-                <div>
-                  <label className="ag-form-label">Blueprint & Layout Attachments</label>
-                  <div className="upload-zone" onClick={handleMockUpload}>
-                    <span style={{ fontSize: '22px', display: 'block', marginBottom: '4px' }}>📂</span>
-                    <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-white)' }}>Drag & drop files here</span>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>or click to simulate cloud upload</span>
-                  </div>
-
-                  {/* Uploads checklist */}
-                  {uploads.length > 0 && (
-                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {uploads.map((file, fidx) => (
-                        <div key={fidx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16, 23, 38, 0.3)', padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '13px' }}>{file.type === 'Blueprint' ? '📐' : '🖼️'}</span>
-                            <div>
-                              <span style={{ fontSize: '11.5px', color: 'var(--text-white)', fontWeight: '500', display: 'block' }}>{file.name}</span>
-                              <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{file.size} • {file.time}</span>
-                            </div>
-                          </div>
-                          <button type="button" onClick={() => handleRemoveUpload(fidx)} style={{ background: 'transparent', border: 'none', color: 'var(--status-red)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}>
-                            &times;
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div style={{ marginTop: '10px' }}>
+                <textarea
+                  className="erp-input-inline"
+                  rows={6}
+                  style={{ resize: 'none', padding: '12px', width: '100%' }}
+                  placeholder="Discussed requirements, customer requested Marine Grade Plywood and anti-rust hinges. Follow up when stock arrives..."
+                  value={createWorkspaceNote}
+                  onChange={e => setCreateWorkspaceNote(e.target.value)}
+                />
               </div>
             </div>
 
@@ -1334,6 +1326,23 @@ export default function Dashboard({ onViewCustomer }) {
 
   return (
     <div className="dashboard-layout">
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          background: toast.type === 'error' ? 'var(--status-red)' : 'var(--status-green)',
+          color: '#fff',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          zIndex: 9999,
+          fontWeight: 'bold',
+          fontSize: '13px'
+        }}>
+          {toast.message}
+        </div>
+      )}
       {/* Page Title & Download Buttons */}
       <div class="page-header">
         <div class="page-title-group">
@@ -1654,10 +1663,15 @@ export default function Dashboard({ onViewCustomer }) {
                     const stageColor = (stages || []).find(s => s.stageName === c.stage)?.stageColor || '#3B82F6';
                     return (
                       <tr key={c.id}>
-                        {/* Customer Info */}
                         <td data-label="Customer" onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer' }}>
                           <div class="customer-cell">
                             <span class="name">{c.customerName || 'Unknown'}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: '700', marginTop: '2px' }}>
+                              {(() => {
+                                const bTag = (c.tags || []).find(t => t.startsWith('BILL:'));
+                                return bTag ? bTag.split(':')[1] : 'No Bill#';
+                              })()}
+                            </span>
                             <span class="phone">{c.phone || ''}</span>
                           </div>
                         </td>
@@ -1829,7 +1843,15 @@ export default function Dashboard({ onViewCustomer }) {
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: priorityColor }} title={`${c.priority} Priority`}></span>
                             <span class="crm-card-title" style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-white)' }}>{c.customerName || 'Unknown'}</span>
                           </div>
-                          {c.phone && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>📞 {c.phone}</div>}
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '10px', color: 'var(--accent)', fontWeight: '700', backgroundColor: 'rgba(212, 166, 79, 0.1)', border: '1px solid rgba(212, 166, 79, 0.2)', padding: '2px 6px', borderRadius: '4px' }}>
+                              {(() => {
+                                const bTag = (c.tags || []).find(t => t.startsWith('BILL:'));
+                                return bTag ? bTag.split(':')[1] : 'No Bill#';
+                              })()}
+                            </span>
+                            {c.phone && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📞 {c.phone}</span>}
+                          </div>
                         </div>
                         
                         <button
