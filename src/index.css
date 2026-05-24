@@ -1,39 +1,39 @@
 /* Import premium typography from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap');
 
 /* Reset and Global Design System Variables */
 :root {
-  --font-display: 'Outfit', 'Inter', -apple-system, sans-serif;
+  --font-display: 'Sora', 'Inter', -apple-system, sans-serif;
   --font-body: 'Inter', -apple-system, sans-serif;
 
-  /* Premium Harmony Colors (Dark Navy & Vibrant Orange) */
-  --bg-main: #0B0F19;          /* Deep industrial dark navy */
-  --bg-card: #151F32;          /* Slate charcoal card background */
-  --bg-card-hover: #1E2B44;    /* Hover highlighted card */
-  --bg-input: #101726;         /* Recessed inputs */
-  --accent: #F97316;           /* Vibrant primary Orange */
-  --accent-hover: #EA580C;     /* Strong Dark Orange */
-  --accent-glow: rgba(249, 115, 22, 0.15);
+  /* Premium Harmony Colors */
+  --bg-main: #0B1120;          /* Deep industrial dark navy */
+  --bg-card: #111827;          /* Slate charcoal card background */
+  --bg-card-hover: #1F2937;    /* Hover highlighted card */
+  --bg-input: #0B1120;         /* Recessed inputs */
+  --accent: #D4A64F;           /* Premium Gold */
+  --accent-hover: #B48A3D;     /* Darker Gold */
+  --accent-glow: rgba(212, 166, 79, 0.15);
 
   /* Typography Colors */
-  --text-white: #FFFFFF;
-  --text-primary: #F1F5F9;
+  --text-white: #F8FAFC;
+  --text-primary: #F8FAFC;
   --text-muted: #94A3B8;
   --text-dark: #1E293B;
 
   /* Border & Separation lines */
-  --border-color: #1E2B40;
-  --border-hover: #2E3E59;
-  --border-focus: #F97316;
+  --border-color: #1E293B;
+  --border-hover: #334155;
+  --border-focus: #D4A64F;
 
   /* Status Colors */
-  --status-green: #10B981;      /* Paid, Confirmed, Low Priority */
+  --status-green: #10B981;      /* Paid, Confirmed, Low Priority, Success */
   --status-green-bg: rgba(16, 185, 129, 0.1);
   
-  --status-yellow: #F59E0B;     /* Partial, Medium Priority, Site Visit */
+  --status-yellow: #F59E0B;     /* Partial, Medium Priority, Warning */
   --status-yellow-bg: rgba(245, 158, 11, 0.1);
   
-  --status-red: #EF4444;        /* Pending, High Priority, Lost */
+  --status-red: #EF4444;        /* Pending, High Priority, Danger */
   --status-red-bg: rgba(239, 68, 68, 0.1);
   
   --status-blue: #3B82F6;       /* New Lead, Contacted */
@@ -46,18 +46,18 @@
   --status-teal-bg: rgba(20, 184, 166, 0.1);
 
   /* Borders & Shadows */
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
   
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 8px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.5);
-  --glass-bg: rgba(21, 31, 50, 0.8);
-  --glass-blur: blur(12px);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --glass-bg: rgba(17, 24, 39, 0.85);
+  --glass-blur: blur(16px);
 
   /* Bottom Navigation height variable for padding */
-  --bottom-nav-height: 70px;
+  --bottom-nav-height: 80px;
 
   /* Standardized Mobile-First Spacing Tokens */
   --space-xs: 8px;
@@ -242,7 +242,7 @@ a:hover {
   height: 3px;
   background-color: var(--accent);
   border-radius: 0 0 4px 4px;
-  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.5);
+  box-shadow: 0 2px 6px rgba(212, 166, 79, 0.5);
 }
 .nav-item.active svg {
   transform: translateY(-2px);
@@ -284,11 +284,11 @@ a:hover {
 .btn-primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-hover));
   color: var(--text-white);
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+  box-shadow: 0 4px 12px rgba(212, 166, 79, 0.25);
 }
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
+  box-shadow: 0 6px 16px rgba(212, 166, 79, 0.4);
 }
 .btn-primary:active {
   transform: translateY(0);
@@ -633,7 +633,7 @@ a:hover {
 }
 .action-btn-circle.accent:hover {
   color: var(--accent);
-  border-color: rgba(249, 115, 22, 0.4);
+  border-color: rgba(212, 166, 79, 0.4);
   background-color: var(--accent-glow);
 }
 
@@ -1514,8 +1514,8 @@ a:hover {
 
 .grand-total-card {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(249, 115, 22, 0.05) 100%);
-  border: 1.5px solid rgba(249, 115, 22, 0.4);
+  background: linear-gradient(135deg, rgba(212, 166, 79, 0.15) 0%, rgba(212, 166, 79, 0.05) 100%);
+  border: 1.5px solid rgba(212, 166, 79, 0.4);
   padding: 12px 16px;
   border-radius: var(--radius-md);
   display: flex;
@@ -1599,19 +1599,19 @@ a:hover {
   font-size: 10px;
   font-weight: 700;
   color: var(--accent);
-  background: rgba(249, 115, 22, 0.12);
-  border: 1px solid rgba(249, 115, 22, 0.3);
+  background: rgba(212, 166, 79, 0.12);
+  border: 1px solid rgba(212, 166, 79, 0.3);
   padding: 3px 10px;
   border-radius: 20px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 0 10px rgba(249, 115, 22, 0.1);
+  box-shadow: 0 0 10px rgba(212, 166, 79, 0.1);
   animation: ag-pulse 2s infinite ease-in-out;
 }
 
 @keyframes ag-pulse {
-  0%, 100% { opacity: 0.8; box-shadow: 0 0 8px rgba(249, 115, 22, 0.1); }
-  50% { opacity: 1; box-shadow: 0 0 15px rgba(249, 115, 22, 0.35); }
+  0%, 100% { opacity: 0.8; box-shadow: 0 0 8px rgba(212, 166, 79, 0.1); }
+  50% { opacity: 1; box-shadow: 0 0 15px rgba(212, 166, 79, 0.35); }
 }
 
 /* Glassmorphic Item Deck */
@@ -1645,20 +1645,20 @@ a:hover {
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 10% 10%, rgba(249, 115, 22, 0.03) 0%, transparent 50%);
+  background: radial-gradient(circle at 10% 10%, rgba(212, 166, 79, 0.03) 0%, transparent 50%);
   pointer-events: none;
   transition: opacity 0.3s ease;
 }
 
 .ag-glass-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(249, 115, 22, 0.28);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(249, 115, 22, 0.18);
+  border-color: rgba(212, 166, 79, 0.28);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(212, 166, 79, 0.18);
   background: rgba(21, 31, 50, 0.65);
 }
 
 .ag-glass-card:hover::before {
-  background: radial-gradient(circle at 10% 10%, rgba(249, 115, 22, 0.08) 0%, transparent 60%);
+  background: radial-gradient(circle at 10% 10%, rgba(212, 166, 79, 0.08) 0%, transparent 60%);
 }
 
 /* Card layout details */
@@ -1719,7 +1719,7 @@ a:hover {
 
 .ag-select-futuristic:focus, .ag-input-futuristic:focus {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 8px rgba(249, 115, 22, 0.25) !important;
+  box-shadow: 0 0 8px rgba(212, 166, 79, 0.25) !important;
   background: rgba(16, 23, 38, 0.9) !important;
 }
 
@@ -1781,10 +1781,10 @@ a:hover {
 }
 
 .ag-status-installed {
-  background: rgba(249, 115, 22, 0.08);
-  border: 1px solid rgba(249, 115, 22, 0.25);
+  background: rgba(212, 166, 79, 0.08);
+  border: 1px solid rgba(212, 166, 79, 0.25);
   color: var(--accent);
-  text-shadow: 0 0 6px rgba(249, 115, 22, 0.3);
+  text-shadow: 0 0 6px rgba(212, 166, 79, 0.3);
 }
 
 /* Completion Metrics & Widgets */
@@ -1846,7 +1846,7 @@ a:hover {
   height: 100%;
   background: linear-gradient(90deg, var(--accent) 0%, #FF8C00 100%);
   border-radius: 5px;
-  box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+  box-shadow: 0 0 10px rgba(212, 166, 79, 0.5);
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1855,7 +1855,7 @@ a:hover {
   font-size: 20px;
   font-weight: 800;
   color: var(--accent);
-  text-shadow: 0 0 10px rgba(249, 115, 22, 0.2);
+  text-shadow: 0 0 10px rgba(212, 166, 79, 0.2);
 }
 
 .ag-ai-assist {
@@ -1972,8 +1972,8 @@ a:hover {
 
 /* Branded Billing Summary & Payment Workspace layout */
 .ag-billing-banner-orange {
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(249, 115, 22, 0.03) 100%);
-  border: 1.5px solid rgba(249, 115, 22, 0.35);
+  background: linear-gradient(135deg, rgba(212, 166, 79, 0.08) 0%, rgba(212, 166, 79, 0.03) 100%);
+  border: 1.5px solid rgba(212, 166, 79, 0.35);
   padding: 12px 16px;
   border-radius: 12px;
   display: flex;
@@ -1981,7 +1981,7 @@ a:hover {
   align-items: center;
   margin-top: 6px;
   margin-bottom: 12px;
-  box-shadow: 0 0 12px rgba(249, 115, 22, 0.1);
+  box-shadow: 0 0 12px rgba(212, 166, 79, 0.1);
 }
 
 .ag-billing-banner-orange-text {
@@ -2434,7 +2434,7 @@ a:hover {
   background: rgba(11, 15, 25, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(249, 115, 22, 0.25);
+  border: 1px solid rgba(212, 166, 79, 0.25);
   border-radius: 16px;
   padding: 12px 16px;
   display: flex;
@@ -2503,12 +2503,12 @@ a:hover {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 4px 12px rgba(212, 166, 79, 0.3);
 }
 
 .pwa-install-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
+  box-shadow: 0 6px 16px rgba(212, 166, 79, 0.4);
 }
 
 .pwa-close-btn {
@@ -2592,7 +2592,7 @@ a:hover {
   left: 0;
   right: 0;
   background: var(--bg-card);
-  border-top: 1px solid rgba(249, 115, 22, 0.25);
+  border-top: 1px solid rgba(212, 166, 79, 0.25);
   border-radius: 20px 20px 0 0;
   padding: var(--space-md) var(--space-md) calc(var(--space-lg) + env(safe-area-inset-bottom, 16px));
   z-index: 201;
@@ -2653,7 +2653,7 @@ a:hover {
   background: var(--accent-glow);
   border-color: var(--accent);
   color: var(--text-white);
-  box-shadow: 0 2px 10px rgba(249, 115, 22, 0.15);
+  box-shadow: 0 2px 10px rgba(212, 166, 79, 0.15);
 }
 
 /* Sticky floating trigger button on mobile */
@@ -2664,14 +2664,14 @@ a:hover {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent) 0%, #EA580C 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #B48A3D 100%);
   border: none;
   color: var(--text-white);
   font-size: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+  box-shadow: 0 6px 20px rgba(212, 166, 79, 0.4);
   z-index: 98;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -2832,7 +2832,7 @@ a:hover {
   
   .quick-actions-panel .btn {
     border-radius: 12px !important;
-    border: 1px solid rgba(249, 115, 22, 0.15) !important;
+    border: 1px solid rgba(212, 166, 79, 0.15) !important;
     background: rgba(21, 31, 50, 0.6) !important;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
     transition: all 0.2s ease !important;
@@ -2874,11 +2874,11 @@ a:hover {
 
   .nav-item.active {
     color: var(--accent) !important;
-    text-shadow: 0 0 8px rgba(249, 115, 22, 0.3);
+    text-shadow: 0 0 8px rgba(212, 166, 79, 0.3);
   }
 
   .nav-item.active svg {
-    filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.4));
+    filter: drop-shadow(0 0 4px rgba(212, 166, 79, 0.4));
   }
 
   /* Reposition FAB on mobile to avoid overlap */
@@ -2888,7 +2888,7 @@ a:hover {
     width: 48px !important;
     height: 48px !important;
     font-size: 22px !important;
-    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35) !important;
+    box-shadow: 0 4px 14px rgba(212, 166, 79, 0.35) !important;
   }
 
   /* Compact button styles for quick action circles */
@@ -2903,8 +2903,8 @@ a:hover {
     color: #25D366 !important;
   }
   .action-btn-circle.primary {
-    background: rgba(249, 115, 22, 0.15) !important;
-    border-color: rgba(249, 115, 22, 0.3) !important;
+    background: rgba(212, 166, 79, 0.15) !important;
+    border-color: rgba(212, 166, 79, 0.3) !important;
     color: var(--accent) !important;
   }
   .action-btn-circle.secondary {

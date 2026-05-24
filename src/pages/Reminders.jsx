@@ -90,9 +90,7 @@ export default function Reminders({ onViewCustomer }) {
           }}
           className="btn btn-primary"
           style={{
-            background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)',
             border: 'none',
-            boxShadow: '0 4px 14px rgba(249, 115, 22, 0.25)',
             fontWeight: '600',
             fontSize: '12.5px',
             padding: '7px 14px',
@@ -344,7 +342,7 @@ export default function Reminders({ onViewCustomer }) {
                       >
                         {cust.customerName}
                       </span>
-                      <span style={{ fontSize: '8px', color: 'var(--accent)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px', background: 'rgba(249, 115, 22, 0.08)', padding: '1px 5px', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '8px', color: 'var(--accent)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px', background: 'rgba(212, 166, 79, 0.08)', padding: '1px 5px', borderRadius: '4px' }}>
                         {rem.reminderType}
                       </span>
                     </div>
@@ -439,7 +437,7 @@ export default function Reminders({ onViewCustomer }) {
           width: '46px',
           height: '46px',
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)',
+          background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%)',
           border: 'none',
           color: 'var(--text-white)',
           fontSize: '22px',
@@ -448,7 +446,7 @@ export default function Reminders({ onViewCustomer }) {
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          boxShadow: '0 4px 18px rgba(249, 115, 22, 0.35), 0 0 8px rgba(249, 115, 22, 0.15)',
+          boxShadow: '0 4px 18px rgba(212, 166, 79, 0.35), 0 0 8px rgba(212, 166, 79, 0.15)',
           zIndex: 99,
           transition: 'all 0.2s ease',
           padding: 0
@@ -457,11 +455,11 @@ export default function Reminders({ onViewCustomer }) {
         title="Schedule New Reminder"
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'scale(1.08)';
-          e.currentTarget.style.boxShadow = '0 6px 22px rgba(249, 115, 22, 0.5), 0 0 12px rgba(249, 115, 22, 0.25)';
+          e.currentTarget.style.boxShadow = '0 6px 22px rgba(212, 166, 79, 0.5), 0 0 12px rgba(212, 166, 79, 0.25)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 4px 18px rgba(249, 115, 22, 0.35), 0 0 8px rgba(249, 115, 22, 0.15)';
+          e.currentTarget.style.boxShadow = '0 4px 18px rgba(212, 166, 79, 0.35), 0 0 8px rgba(212, 166, 79, 0.15)';
         }}
       >
         +
@@ -548,9 +546,7 @@ export default function Reminders({ onViewCustomer }) {
                   type="submit"
                   className="btn btn-primary"
                   style={{
-                    background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)',
                     border: 'none',
-                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.2)',
                     padding: '6px 14px',
                     borderRadius: '8px',
                     fontSize: '12px'

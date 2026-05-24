@@ -5,7 +5,7 @@ import autoTable from 'jspdf-autotable';
 const COLORS = {
   NAVY_DARK: [11, 15, 25],      // Deep corporate navy
   GOLD_ACCENT: [218, 165, 32],   // #DAB920 - Premium gold
-  ORANGE_ACCENT: [249, 115, 22], // #F97316 - Soft orange
+  ORANGE_ACCENT: [212, 166, 79], // #D4A64F - Soft orange
   TEXT_DARK: [33, 43, 54],       // Off-black body text
   TEXT_MUTED: [108, 117, 125],   // Slate gray muted text
   BG_LIGHT: [248, 250, 252],     // Light gray background

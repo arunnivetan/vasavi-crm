@@ -29,7 +29,7 @@ export default function Pipeline({ onViewCustomer }) {
   
   // Create stage states
   const [addStageName, setAddStageName] = useState('');
-  const [addStageColor, setAddStageColor] = useState('#F97316');
+  const [addStageColor, setAddStageColor] = useState('#D4A64F');
 
   // --- PIEPLINE INTERACTIONS ---
   const openMoveModal = (customerId, currentStage) => {
@@ -53,7 +53,7 @@ export default function Pipeline({ onViewCustomer }) {
     const success = addStage(addStageName.trim(), addStageColor);
     if (success) {
       setAddStageName('');
-      setAddStageColor('#F97316');
+      setAddStageColor('#D4A64F');
     } else {
       alert('A stage with this name already exists.');
     }

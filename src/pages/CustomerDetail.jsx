@@ -1088,11 +1088,9 @@ export default function CustomerDetail({ customerId, onBack }) {
                         <span className="ag-project-status-badge">HYPERDRIVE ACTIVE</span>
                         <button
                           type="button"
-                          className="btn btn-secondary btn-sm"
+                          className="btn btn-primary btn-sm"
                           style={{
-                            background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)',
                             border: 'none',
-                            boxShadow: '0 0 10px rgba(249, 115, 22, 0.4)',
                             fontWeight: '700',
                             padding: '6px 14px'
                           }}
@@ -1631,7 +1629,7 @@ export default function CustomerDetail({ customerId, onBack }) {
                   {/* Right Column: Premium Sidebar Summary Card */}
                   <div style={{
                     background: 'linear-gradient(135deg, rgba(21, 31, 50, 0.7) 0%, rgba(15, 23, 38, 0.9) 100%)',
-                    border: '1px solid rgba(249, 115, 22, 0.15)',
+                    border: '1px solid rgba(212, 166, 79, 0.15)',
                     borderRadius: '12px',
                     padding: '18px',
                     display: 'flex',
@@ -1727,7 +1725,7 @@ export default function CustomerDetail({ customerId, onBack }) {
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onClick={() => setIsUpdatePayOpen(false)}>Cancel</button>
-                <button type="submit" class="btn class-btn" style={{ background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)', border: 'none', color: 'var(--text-white)', padding: '8px 16px', borderRadius: '6px', fontWeight: '700', boxShadow: '0 4px 14px rgba(249, 115, 22, 0.3)', cursor: 'pointer' }}>
+                <button type="submit" class="btn btn-primary" style={{ border: 'none', color: 'var(--text-white)', padding: '8px 16px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
                   Save Payment
                 </button>
               </div>

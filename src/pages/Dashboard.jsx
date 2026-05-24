@@ -103,7 +103,7 @@ export default function Dashboard({ onViewCustomer }) {
           width: '40px',
           height: '40px',
           borderRadius: '50%',
-          border: '3px solid rgba(249, 115, 22, 0.1)',
+          border: '3px solid rgba(212, 166, 79, 0.1)',
           borderTopColor: 'var(--accent)',
           animation: 'spin 1s linear infinite'
         }}></div>
@@ -324,7 +324,7 @@ export default function Dashboard({ onViewCustomer }) {
     // Dynamic Donut Path calculations
     let cumulativePercent = 0;
     const donutCategories = [
-      { label: 'Material', value: catSubtotals.Material, color: '#F97316' },
+      { label: 'Material', value: catSubtotals.Material, color: '#D4A64F' },
       { label: 'Installation', value: catSubtotals.Installation, color: '#F59E0B' },
       { label: 'Automation', value: catSubtotals.Automation, color: '#3B82F6' },
       { label: 'Labor', value: catSubtotals.Labor, color: '#A855F7' },
@@ -431,7 +431,7 @@ export default function Dashboard({ onViewCustomer }) {
           }
           .erp-input-inline:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 6px rgba(249, 115, 22, 0.15);
+            box-shadow: 0 0 6px rgba(212, 166, 79, 0.15);
           }
           .upload-zone {
             border: 1.5px dashed rgba(255, 255, 255, 0.06);
@@ -444,7 +444,7 @@ export default function Dashboard({ onViewCustomer }) {
           }
           .upload-zone:hover {
             border-color: var(--accent);
-            background: rgba(249, 115, 22, 0.02);
+            background: rgba(212, 166, 79, 0.02);
           }
 
           /* Responsive utilities & Mobile Layout Redesign overrides */
@@ -569,7 +569,7 @@ export default function Dashboard({ onViewCustomer }) {
           }
           .mobile-material-card:focus-within {
             border-color: var(--accent);
-            box-shadow: 0 4px 16px rgba(249, 115, 22, 0.1);
+            box-shadow: 0 4px 16px rgba(212, 166, 79, 0.1);
           }
           .mobile-material-card-header {
             display: flex;
@@ -583,7 +583,7 @@ export default function Dashboard({ onViewCustomer }) {
             font-size: 11px;
             font-weight: 700;
             color: var(--accent);
-            background: rgba(249, 115, 22, 0.08);
+            background: rgba(212, 166, 79, 0.08);
             padding: 3px 8px;
             border-radius: 6px;
             text-transform: uppercase;
@@ -652,9 +652,8 @@ export default function Dashboard({ onViewCustomer }) {
               type="button"
               className="btn btn-primary"
               style={{
-                background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)',
                 border: 'none',
-                boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
+                boxShadow: '0 4px 14px rgba(212, 166, 79, 0.35)',
                 fontWeight: '700',
                 fontSize: '12.5px',
                 padding: '7px 16px',
@@ -739,9 +738,8 @@ export default function Dashboard({ onViewCustomer }) {
                 <span>Project Materials</span>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn btn-primary"
                   style={{
-                    background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)',
                     border: 'none',
                     fontWeight: '700',
                     fontSize: '11px',
@@ -1129,7 +1127,7 @@ export default function Dashboard({ onViewCustomer }) {
           <div className="erp-sidebar-col">
             
             {/* Sidebar Card 1: Billing Workspace & Financials */}
-            <div className="erp-card" style={{ background: 'linear-gradient(to bottom, rgba(21, 31, 50, 0.6) 0%, rgba(21, 31, 50, 0.4) 100%)', border: '1px solid rgba(249, 115, 22, 0.08)' }}>
+            <div className="erp-card" style={{ background: 'linear-gradient(to bottom, rgba(21, 31, 50, 0.6) 0%, rgba(21, 31, 50, 0.4) 100%)', border: '1px solid rgba(212, 166, 79, 0.08)' }}>
               <div className="erp-card-title" style={{ color: 'var(--accent)' }}>Billing Workspace & Financials</div>
               
               {/* SVG Cost Split Ring & Legend */}
@@ -1240,7 +1238,7 @@ export default function Dashboard({ onViewCustomer }) {
                     </div>
                   </div>
 
-                  <div className="ag-billing-banner-orange" style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.05)', border: '1px solid rgba(249, 115, 22, 0.15)', borderRadius: '8px' }}>
+                  <div className="ag-billing-banner-orange" style={{ padding: '12px', background: 'rgba(212, 166, 79, 0.05)', border: '1px solid rgba(212, 166, 79, 0.15)', borderRadius: '8px' }}>
                     <span style={{ display: 'block', fontSize: '8.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Grand Final Bill</span>
                     <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--status-green)', display: 'block', marginTop: '2px', fontFamily: 'var(--font-display)' }}>
                       ₹{grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
@@ -1959,9 +1957,8 @@ export default function Dashboard({ onViewCustomer }) {
               <button
                 class="btn btn-primary"
                 style={{
-                  background: 'linear-gradient(135deg, var(--accent) 0%, #EA580C 100%)',
                   border: 'none',
-                  boxShadow: '0 4px 14px rgba(249, 115, 22, 0.3)',
+                  boxShadow: '0 4px 14px rgba(212, 166, 79, 0.3)',
                   height: '40px',
                   justifyContent: 'center',
                   fontWeight: '700',

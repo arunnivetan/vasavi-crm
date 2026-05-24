@@ -68,11 +68,11 @@ function AppContent() {
         <div class="brand-section">
           <div className="brand-logo" style={{ width: '44px', height: '44px', flexShrink: 0, background: 'none', boxShadow: 'none' }}>
             <svg viewBox="0 0 100 100" width="100%" height="100%">
-              <circle cx="50" cy="50" r="48" fill="#0B0F19" />
-              <circle cx="50" cy="50" r="42" fill="none" stroke="#F97316" strokeWidth="1.8" />
+              <circle cx="50" cy="50" r="48" fill="#0B1120" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#D4A64F" strokeWidth="1.8" />
               <path id="top-text-path" d="M 12 50 A 38 38 0 0 1 88 50" fill="none" />
               <path id="bottom-text-path" d="M 88 50 A 38 38 0 0 1 12 50" fill="none" />
-              <text fill="#ffffff" fontSize="5" fontFamily="'Inter', sans-serif" fontWeight="700" letterSpacing="1">
+              <text fill="#F8FAFC" fontSize="5" fontFamily="'Inter', sans-serif" fontWeight="700" letterSpacing="1">
                 <textPath href="#top-text-path" startOffset="50%" textAnchor="middle">
                   SRI VASAVI PLYWOOD
                 </textPath>
@@ -82,10 +82,10 @@ function AppContent() {
                   SINCE 1997
                 </textPath>
               </text>
-              <text x="50" y="58" fill="#F97316" fontSize="22" fontFamily="'Outfit', 'Georgia', serif" fontWeight="800" text-anchor="middle">
+              <text x="50" y="58" fill="#D4A64F" fontSize="22" fontFamily="'Sora', 'Georgia', serif" fontWeight="800" text-anchor="middle">
                 SVP
               </text>
-              <path d="M 32 75 Q 50 82 68 75 M 36 78 Q 50 85 64 78" fill="none" stroke="#F97316" strokeWidth="0.8" opacity="0.6" />
+              <path d="M 32 75 Q 50 82 68 75 M 36 78 Q 50 85 64 78" fill="none" stroke="#D4A64F" strokeWidth="0.8" opacity="0.6" />
             </svg>
           </div>
           <div>
@@ -192,9 +192,9 @@ function AppContent() {
         <div className="pwa-install-banner animate-slide-in">
           <div className="pwa-install-icon">
             <svg viewBox="0 0 100 100" width="32" height="32">
-              <circle cx="50" cy="50" r="48" fill="#0B0F19" />
-              <circle cx="50" cy="50" r="42" fill="none" stroke="#F97316" strokeWidth="1.8" />
-              <text x="50" y="58" fill="#F97316" fontSize="26" fontFamily="'Outfit', sans-serif" fontWeight="900" textAnchor="middle">SVP</text>
+              <circle cx="50" cy="50" r="48" fill="#0B1120" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#D4A64F" strokeWidth="1.8" />
+              <text x="50" y="58" fill="#D4A64F" fontSize="26" fontFamily="'Sora', sans-serif" fontWeight="900" textAnchor="middle">SVP</text>
             </svg>
           </div>
           <div className="pwa-install-text">
