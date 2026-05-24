@@ -92,7 +92,8 @@ body {
   font-family: var(--font-body);
   background-color: var(--bg-main);
   color: var(--text-primary);
-  line-height: 1.5;
+  font-size: 15px; /* Scaled up for mobile readability */
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -2914,7 +2915,243 @@ a:hover {
   }
 }
 
+/* =========================================================================
+   PREMIUM MOBILE CRM STYLES (Added per user redesign)
+   ========================================================================= */
 
+/* Premium Header */
+.mobile-app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) 0 var(--space-md) 0;
+  border-bottom: none;
+  background: var(--bg-main);
+}
 
+.action-btn-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
 
+.action-btn-circle:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.08);
+}
 
+.action-btn-circle.glow-gold {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  box-shadow: 0 0 15px rgba(212, 166, 79, 0.4);
+}
+
+/* 2-Column Metrics Grid */
+.mobile-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: var(--space-md);
+}
+
+.premium-metric-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.premium-metric-card .metric-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.premium-metric-card .metric-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.premium-metric-card .metric-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.premium-metric-card .metric-val {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: var(--font-display);
+}
+
+/* Search Area */
+.mobile-search-filter-area {
+  margin-bottom: 16px;
+}
+
+/* Mobile Customer Cards */
+.mobile-customer-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.premium-mobile-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.premium-mobile-card:active {
+  transform: scale(0.98);
+  border-color: rgba(255,255,255,0.1);
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 0;
+}
+
+.action-menu-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.card-phone-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.card-req-row {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.card-badges-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.card-divider {
+  border: none;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  margin: 8px 0;
+}
+
+.card-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.footer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.meta-icon {
+  margin-right: 4px;
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-white);
+  border: none;
+}
+
+.action-circle.call { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.action-circle.whatsapp { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+
+.btn-open-details {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Premium Pipeline Card */
+.premium-pipeline-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.pipeline-stage-tabs::-webkit-scrollbar {
+  display: none;
+}
+.pipeline-stage-tabs {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

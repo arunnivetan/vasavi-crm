@@ -1343,101 +1343,87 @@ export default function Dashboard({ onViewCustomer }) {
           {toast.message}
         </div>
       )}
-      {/* Page Title & Download Buttons */}
-      <div class="page-header">
-        <div class="page-title-group">
-          <h2>Overview Dashboard</h2>
-          <p>Real-time client tracking and collection summary metrics</p>
+      {/* Premium Mobile App Header */}
+      <div className="mobile-app-header">
+        <div className="header-left">
+          <h2 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 2px 0', color: 'var(--text-white)' }}>Dashboard</h2>
+          <p style={{ fontSize: '13px', margin: 0, color: 'var(--text-muted)' }}>Track customers & follow-ups</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <button class="btn btn-secondary" onClick={() => handleExportAllPDF('download')} title="Download Master Portfolio PDF">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-              </svg>
-              Export Portfolio
-            </button>
-            <button class="btn btn-secondary btn-circle" style={{ width: '42px', height: '42px', borderRadius: '50%', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleExportAllPDF('print')} title="View / Print Portfolio PDF">
-              🖨️
-            </button>
-          </div>
-          <button class="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div className="header-right" style={{ display: 'flex', gap: '10px' }}>
+          <button className="action-btn-circle" onClick={() => handleExportAllPDF('download')} title="Export Portfolio">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+          </button>
+          <button className="action-btn-circle" title="Notifications">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+          </button>
+          <button className="action-btn-circle glow-gold" onClick={() => setIsAddModalOpen(true)} title="Add Customer">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            Add Customer
           </button>
         </div>
       </div>
 
-      {/* TOP SUMMARY METRICS CARDS */}
-      <div class="metrics-grid">
-        <div class="metric-card primary">
-          <div class="metric-icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      {/* 2-Column Compact Metric Cards */}
+      <div className="mobile-metrics-grid">
+        <div className="premium-metric-card">
+          <div className="metric-icon-wrapper" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
               <circle cx="9" cy="7" r="4" />
               <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
               <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
           </div>
-          <div class="metric-label">TOTAL CUSTOMERS</div>
-          <div class="metric-val">{totalCustomersCount}</div>
-        </div>
-
-        <div class="metric-card red">
-          <div class="metric-icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
+          <div className="metric-info">
+            <span className="metric-label">Total Customers</span>
+            <span className="metric-val" style={{ color: '#3b82f6' }}>{totalCustomersCount}</span>
           </div>
-          <div class="metric-label">TODAY FOLLOW-UPS</div>
-          <div class="metric-val">{todayReminders.length}</div>
         </div>
 
-        <div class="metric-card yellow">
-          <div class="metric-icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div className="premium-metric-card">
+          <div className="metric-icon-wrapper" style={{ color: '#f97316', background: 'rgba(249, 115, 22, 0.1)' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
               <line x1="16" y1="2" x2="16" y2="6"></line>
               <line x1="8" y1="2" x2="8" y2="6"></line>
               <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
           </div>
-          <div class="metric-label">PENDING FOLLOW-UPS</div>
-          <div class="metric-val">{pendingRemindersCount}</div>
-        </div>
-
-        <div class="metric-card green">
-          <div class="metric-icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
+          <div className="metric-info">
+            <span className="metric-label">Today's Follow-ups</span>
+            <span className="metric-val" style={{ color: '#f97316' }}>{todayReminders.length}</span>
           </div>
-          <div class="metric-label">COMPLETED DEALS</div>
-          <div class="metric-val">{completedDeals}</div>
         </div>
 
-        <div class="metric-card primary">
-          <div class="metric-icon-box">
+        <div className="premium-metric-card">
+          <div className="metric-icon-wrapper" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
             <span style={{ fontSize: '18px', fontWeight: 'bold' }}>₹</span>
           </div>
-          <div class="metric-label">TOTAL SALES VALUE</div>
-          <div class="metric-val">₹{totalSalesVal >= 1000 ? (totalSalesVal / 1000).toFixed(1) + 'K' : totalSalesVal}</div>
+          <div className="metric-info">
+            <span className="metric-label">Total Sales Value</span>
+            <span className="metric-val" style={{ color: '#10b981' }}>₹{totalSalesVal >= 1000 ? (totalSalesVal / 1000).toFixed(1) + 'K' : totalSalesVal}</span>
+          </div>
         </div>
 
-        <div class="metric-card red">
-          <div class="metric-icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="1" x2="12" y2="23"></line>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        <div className="premium-metric-card">
+          <div className="metric-icon-wrapper" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
           </div>
-          <div class="metric-label">PENDING PAYMENTS</div>
-          <div class="metric-val">{pendingPaymentsCount}</div>
+          <div className="metric-info">
+            <span className="metric-label">Pending Payments</span>
+            <span className="metric-val" style={{ color: '#ef4444' }}>{pendingPaymentsCount}</span>
+          </div>
         </div>
       </div>
 
@@ -1579,59 +1565,39 @@ export default function Dashboard({ onViewCustomer }) {
         </div>
 
         {/* Mobile-First Premium Compact Filter Layout */}
-        <div class="mobile-only-flex" style={{ width: '100%', gap: '8px', alignItems: 'center', margin: '4px 0 8px 0' }}>
-          <div class="search-input-wrapper" style={{ flex: 1, margin: 0 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div className="mobile-search-filter-area">
+          <div className="search-input-wrapper full-width">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
             <input
               type="text"
-              class="form-input form-input-search"
-              style={{ fontSize: '13px', height: '38px', paddingLeft: '32px' }}
-              placeholder="Search clients..."
+              className="form-input form-input-search"
+              style={{ fontSize: '14px', height: '44px', paddingLeft: '36px', borderRadius: '12px' }}
+              placeholder="Search customers, phone, requirement..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <button
-            class="filter-chip"
-            style={{
-              padding: '8px 14px',
-              borderRadius: '8px',
-              height: '38px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: (selectedStage !== 'All' || selectedStaff !== 'All' || selectedPriority !== 'All') ? 'var(--accent-glow)' : 'rgba(255,255,255,0.03)',
-              borderColor: (selectedStage !== 'All' || selectedStaff !== 'All' || selectedPriority !== 'All') ? 'var(--accent)' : 'var(--border-color)',
-              color: (selectedStage !== 'All' || selectedStaff !== 'All' || selectedPriority !== 'All') ? 'var(--text-white)' : 'var(--text-muted)'
-            }}
-            onClick={() => setIsMobileFilterOpen(true)}
-          >
-            <span>⚡ Filters</span>
-            {(selectedStage !== 'All' || selectedStaff !== 'All' || selectedPriority !== 'All') && (
-              <span style={{
-                background: 'var(--accent)',
-                color: 'white',
-                borderRadius: '50%',
-                width: '15px',
-                height: '15px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '9px',
-                fontWeight: 'bold',
-                marginLeft: '2px'
-              }}>
-                {
-                  (selectedStage !== 'All' ? 1 : 0) +
-                  (selectedStaff !== 'All' ? 1 : 0) +
-                  (selectedPriority !== 'All' ? 1 : 0)
-                }
-              </span>
-            )}
-          </button>
+          <div className="filter-dropdowns-row" style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <div className="filter-group" style={{ flex: 1, margin: 0 }}>
+              <select className="form-input" style={{ height: '40px', borderRadius: '10px', fontSize: '13px' }} value={selectedStage} onChange={e => setSelectedStage(e.target.value)}>
+                <option value="All">All Stages</option>
+                {(stages || []).map(s => (
+                  <option key={s?.stageName} value={s?.stageName}>{s?.stageName}</option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-group" style={{ flex: 1, margin: 0 }}>
+              <select className="form-input" style={{ height: '40px', borderRadius: '10px', fontSize: '13px' }} value={selectedStaff} onChange={e => setSelectedStaff(e.target.value)}>
+                <option value="All">All Staff</option>
+                {(staffList || []).map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1826,38 +1792,21 @@ export default function Dashboard({ onViewCustomer }) {
             </div>
 
             {/* Mobile View Stacked Cards */}
-            <div class="mobile-only">
-              <div class="mobile-customer-cards">
+            <div className="mobile-only">
+              <div className="mobile-customer-cards">
                 {(filteredCustomers || []).map(c => {
                   if (!c) return null;
                   const stageColor = (stages || []).find(s => s.stageName === c.stage)?.stageColor || '#3B82F6';
-                  const priorityColor = c.priority === 'High' ? 'var(--status-red)' : c.priority === 'Medium' ? 'var(--status-yellow)' : 'var(--status-green)';
+                  const priorityColor = c.priority === 'High' ? '#ef4444' : c.priority === 'Medium' ? '#f59e0b' : '#10b981';
                   
                   return (
-                    <div class="crm-card-compact" key={c.id} style={{ padding: '12px 14px' }}>
-                      
-                      {/* Row 1: Name, Phone & 3-dot Action Menu */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div onClick={() => onViewCustomer(c.id)} style={{ cursor: 'pointer', flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: priorityColor }} title={`${c.priority} Priority`}></span>
-                            <span class="crm-card-title" style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-white)' }}>{c.customerName || 'Unknown'}</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '10px', color: 'var(--accent)', fontWeight: '700', backgroundColor: 'rgba(212, 166, 79, 0.1)', border: '1px solid rgba(212, 166, 79, 0.2)', padding: '2px 6px', borderRadius: '4px' }}>
-                              {(() => {
-                                const bTag = (c.tags || []).find(t => t.startsWith('BILL:'));
-                                return bTag ? bTag.split(':')[1] : 'No Bill#';
-                              })()}
-                            </span>
-                            {c.phone && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📞 {c.phone}</span>}
-                          </div>
-                        </div>
-                        
+                    <div className="premium-mobile-card" key={c.id}>
+                      {/* TOP: Customer Name & 3-dot */}
+                      <div className="card-header-row" onClick={() => onViewCustomer(c.id)}>
+                        <h3 className="card-title">{c.customerName || 'Unknown'}</h3>
                         <button
                           type="button"
-                          className="action-btn-circle"
-                          style={{ width: '28px', height: '28px', minWidth: '28px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: 'var(--text-muted)' }}
+                          className="action-menu-btn"
                           onClick={(e) => {
                             e.stopPropagation();
                             setActiveActionCustomerId(c.id);
@@ -1867,43 +1816,75 @@ export default function Dashboard({ onViewCustomer }) {
                         </button>
                       </div>
 
-                      {/* Row 2: Badges (Stage, Priority, Payment status) */}
-                      <div style={{ display: 'flex', gap: '6px', margin: '8px 0 6px 0', flexWrap: 'wrap' }} onClick={() => onViewCustomer(c.id)}>
-                        <span class="badge" style={{ backgroundColor: `${stageColor}15`, color: stageColor, border: `1px solid ${stageColor}30`, fontSize: '9px', padding: '1.5px 5px', borderRadius: '4px' }}>
+                      {/* SECOND: Phone */}
+                      {c.phone && (
+                        <div className="card-phone-row" onClick={() => onViewCustomer(c.id)}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.1-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                          </svg>
+                          {c.phone}
+                        </div>
+                      )}
+
+                      {/* THIRD: Requirement */}
+                      <div className="card-req-row" onClick={() => onViewCustomer(c.id)}>
+                        {c.requirement || 'No requirement specified'}
+                      </div>
+
+                      {/* FOURTH: Badges */}
+                      <div className="card-badges-row" onClick={() => onViewCustomer(c.id)}>
+                        <span className="badge" style={{ backgroundColor: `${stageColor}15`, color: stageColor }}>
                           {c.stage || 'New Lead'}
                         </span>
-                        <span class="badge" style={{ backgroundColor: `${priorityColor}15`, color: priorityColor, border: `1px solid ${priorityColor}30`, fontSize: '9px', padding: '1.5px 5px', borderRadius: '4px' }}>
+                        <span className="badge" style={{ backgroundColor: `${priorityColor}15`, color: priorityColor }}>
                           {c.priority || 'Medium'}
                         </span>
-                        <span class="badge" style={{
+                        <span className="badge" style={{
                           backgroundColor: c.pendingAmount === 0 ? 'rgba(16, 185, 129, 0.1)' : c.advancePaid > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                          color: c.pendingAmount === 0 ? 'var(--status-green)' : c.advancePaid > 0 ? 'var(--status-yellow)' : 'var(--status-red)',
-                          border: `1px solid ${c.pendingAmount === 0 ? 'rgba(16, 185, 129, 0.2)' : c.advancePaid > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
-                          fontSize: '9px',
-                          padding: '1.5px 5px',
-                          borderRadius: '4px'
+                          color: c.pendingAmount === 0 ? '#10b981' : c.advancePaid > 0 ? '#f59e0b' : '#ef4444'
                         }}>
                           {c.pendingAmount === 0 ? 'Paid' : c.advancePaid > 0 ? 'Partial' : 'Pending'}
                         </span>
                       </div>
 
-                      {/* Row 3: Financial Details */}
-                      <div style={{ display: 'flex', gap: '14px', fontSize: '11.5px', color: 'var(--text-white)', fontWeight: '600', padding: '4px 0', borderBottom: '1px dashed rgba(255,255,255,0.03)', marginBottom: '6px' }} onClick={() => onViewCustomer(c.id)}>
-                        <span>Total: ₹{(c.amount || 0).toLocaleString('en-IN')}</span>
-                        <span style={{ color: 'var(--text-muted)', fontWeight: '400' }}>•</span>
-                        <span style={{ color: 'var(--status-green)' }}>₹{(c.advancePaid || 0).toLocaleString('en-IN')} paid</span>
-                      </div>
+                      <hr className="card-divider" />
 
-                      {/* Row 4: Representative and Date */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', color: 'var(--text-muted)' }} onClick={() => onViewCustomer(c.id)}>
-                        <span>👤 {c.assignedStaff || 'Unassigned'}</span>
-                        {c.followupDate && (
-                          <span style={{ color: c.followupDate < todayStr ? 'var(--status-red)' : 'inherit', fontWeight: c.followupDate < todayStr ? '700' : 'normal' }}>
-                            📅 {c.followupDate}
-                          </span>
-                        )}
+                      {/* BOTTOM: Assigned & Follow-up, with RIGHT ACTIONS */}
+                      <div className="card-footer-row">
+                        <div className="footer-meta" onClick={() => onViewCustomer(c.id)}>
+                          <div className="meta-item">
+                            <span className="meta-icon">👤</span> {c.assignedStaff || 'Unassigned'}
+                          </div>
+                          {c.followupDate && (
+                            <div className="meta-item">
+                              <span className="meta-icon">📅</span> {c.followupDate}
+                            </div>
+                          )}
+                        </div>
+                        <div className="footer-actions">
+                          {c.phone && (
+                            <a href={`tel:${c.phone}`} className="action-circle call" title="Call Customer">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.1-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                              </svg>
+                            </a>
+                          )}
+                          {c.phone && (
+                            <a
+                              href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName || '')},%20this%20is%20regarding%20your%20requirement%20for%20${encodeURIComponent(c.requirement || '')}.`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="action-circle whatsapp"
+                              title="WhatsApp Message"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                              </svg>
+                            </a>
+                          )}
+                          <button className="btn-open-details" onClick={() => onViewCustomer(c.id)}>Open</button>
+                        </div>
                       </div>
-
                     </div>
                   );
                 })}

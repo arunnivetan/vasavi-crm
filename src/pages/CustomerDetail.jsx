@@ -1744,28 +1744,35 @@ export default function CustomerDetail({ customerId, onBack }) {
             <div className="modal-body" style={{ padding: '24px', maxHeight: '60vh', overflowY: 'auto' }}>
               {/* Preview Content */}
               <div style={{ padding: '30px', backgroundColor: '#fff', color: '#000', borderRadius: '8px', border: '1px solid #ddd' }}>
-                <div style={{ textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #eee', paddingBottom: '20px' }}>
-                  <h1 style={{ margin: '0 0 10px 0', fontSize: '24px', color: '#2563eb' }}>VASAVI CRM</h1>
-                  <h2 style={{ margin: '0', fontSize: '18px', color: '#333' }}>CUSTOMER PROFILE REPORT</h2>
+                {/* INVOICE HEADER */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #dab920', paddingBottom: '20px', marginBottom: '20px' }}>
+                  {/* LEFT: LOGO */}
+                  <div style={{ flex: '1' }}>
+                    <img src="/src/assets/svp-logo.png" alt="SVP Logo" style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
+                  </div>
+                  
+                  {/* CENTER: COMPANY DETAILS */}
+                  <div style={{ flex: '2', textAlign: 'center' }}>
+                    <h1 style={{ margin: '0 0 5px 0', fontSize: '22px', color: '#0b0f19', fontWeight: 'bold' }}>SRI VASAVI PLYWOODS</h1>
+                    <h2 style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#6c757d', fontWeight: 'bold' }}>GLASSWARES & HARDWARES</h2>
+                    <p style={{ margin: '0', fontSize: '10px', color: '#6c757d' }}>M.R.V. Building, Poovalur Road, Lalgudi-621601</p>
+                    <p style={{ margin: '0', fontSize: '10px', color: '#6c757d' }}>Ph: 9842438037 | GSTIN: 33APXPS6615P1ZC</p>
+                  </div>
+                  
+                  {/* RIGHT: METADATA */}
+                  <div style={{ flex: '1', textAlign: 'right' }}>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>BILL NO: <span style={{ color: '#666', fontWeight: 'normal' }}>{billNumber}</span></p>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>BILL DATE: <span style={{ color: '#666', fontWeight: 'normal' }}>{new Date().toLocaleDateString('en-IN')}</span></p>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>CUSTOMER ID: <span style={{ color: '#666', fontWeight: 'normal' }}>CL-{customer.id ? customer.id.split('_')[1] : 'FILE'}</span></p>
+                  </div>
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
-                  <div>
-                    <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>CUSTOMER NAME</p>
-                    <p style={{ margin: 0, fontWeight: 'bold', fontSize: '16px' }}>{customer.customerName}</p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>BILL NUMBER</p>
-                    <p style={{ margin: 0, fontWeight: 'bold', fontSize: '16px' }}>{billNumber}</p>
-                  </div>
-                  <div>
-                    <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>CONTACT</p>
-                    <p style={{ margin: 0 }}>{customer.phone || 'N/A'}</p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>DATE</p>
-                    <p style={{ margin: 0 }}>{new Date().toLocaleDateString('en-IN')}</p>
-                  </div>
+                {/* CUSTOMER DETAILS ROW */}
+                <div style={{ marginBottom: '20px' }}>
+                  <p style={{ margin: '0 0 5px 0', color: '#6c757d', fontSize: '12px', fontWeight: 'bold' }}>TO:</p>
+                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '16px', color: '#0b0f19' }}>{customer.customerName}</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#212b36' }}>{customer.address || 'Address not specified'}</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#212b36' }}>Ph: {customer.phone || 'N/A'}</p>
                 </div>
 
                 <div style={{ marginBottom: '30px' }}>

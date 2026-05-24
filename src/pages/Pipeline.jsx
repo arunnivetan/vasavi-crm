@@ -83,19 +83,34 @@ export default function Pipeline({ onViewCustomer }) {
 
   return (
     <div>
-      {/* Header section */}
-      <div class="page-header">
-        <div class="page-title-group">
-          <h2>Sales Pipeline</h2>
-          <p>{customers.length} Active Deals across {stages.length} Sales Stages</p>
-        </div>
-        <div>
-          <button class="btn btn-secondary" onClick={() => setIsSettingsOpen(true)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      {/* Premium Pipeline Header */}
+      <div className="mobile-app-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '16px', paddingBottom: '0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <img src="/src/assets/svp-logo.png" alt="Logo" style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fff', padding: '2px' }} />
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0', color: 'var(--text-white)' }}>Sri Vasavi Plywoods</h2>
+              <p style={{ fontSize: '11px', margin: 0, color: 'var(--text-muted)' }}>Pipeline & Deals</p>
+            </div>
+          </div>
+          <button className="action-btn-circle" title="Notifications">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
             </svg>
-            Customize Pipeline Stages
+          </button>
+        </div>
+        
+        {/* Horizontal Scrollable Stage Tabs */}
+        <div className="pipeline-stage-tabs" style={{ display: 'flex', overflowX: 'auto', gap: '12px', width: '100%', paddingBottom: '12px', paddingLeft: '4px', scrollSnapType: 'x mandatory' }}>
+          {stages.sort((a, b) => a.stageOrder - b.stageOrder).map(stg => (
+            <div key={stg.stageName} style={{ scrollSnapAlign: 'start', whiteSpace: 'nowrap', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.05)', fontSize: '13px', fontWeight: '600', color: 'var(--text-white)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: stg.stageColor, marginRight: '6px' }}></span>
+              {stg.stageName}
+            </div>
+          ))}
+          <button style={{ padding: '6px 14px', borderRadius: '20px', backgroundColor: 'transparent', border: '1px dashed rgba(255,255,255,0.3)', color: 'var(--text-white)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', scrollSnapAlign: 'start' }} onClick={() => setIsSettingsOpen(true)}>
+            + Manage
           </button>
         </div>
       </div>
@@ -125,64 +140,54 @@ export default function Pipeline({ onViewCustomer }) {
                       No deals in this stage
                     </div>
                   ) : (
-                    stageCustomers.map(c => (
-                      <div class="kanban-card" key={c.id}>
+                    stageCustomers.map(c => {
+                      const priorityColor = c.priority === 'High' ? '#ef4444' : c.priority === 'Medium' ? '#f59e0b' : '#10b981';
+                      return (
+                      <div className="premium-pipeline-card" key={c.id}>
                         {/* Name and Priority */}
-                        <div class="kanban-card-title-row">
-                          <span
-                            class="kanban-card-name"
-                            onClick={() => onViewCustomer(c.id)}
-                            style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                          >
+                        <div className="card-header-row" onClick={() => onViewCustomer(c.id)}>
+                          <span className="card-title">
                             {c.customerName}
                           </span>
-                          <span class={`badge badge-priority-${c.priority.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                          <span className="badge" style={{ backgroundColor: `${priorityColor}15`, color: priorityColor }}>
                             {c.priority}
                           </span>
                         </div>
 
-                        {/* Phone */}
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          📞 {c.phone || 'No phone'}
-                        </div>
-
                         {/* Requirements snippet */}
-                        <div class="kanban-card-req">
+                        <div className="card-req-row" style={{ marginTop: '8px' }} onClick={() => onViewCustomer(c.id)}>
                           {c.requirement || 'No requirements specified.'}
                         </div>
-
-                        {/* Representative staff / Followup */}
-                        <div class="kanban-card-meta">
-                          <span class="kanban-card-staff">
-                            👤 {c.assignedStaff || 'Unassigned'}
-                          </span>
-                          {c.followupDate && (
-                            <span class={`kanban-card-date ${c.followupDate < todayStr ? 'overdue' : ''}`}>
-                              📅 {c.followupDate}
-                            </span>
-                          )}
-                        </div>
+                        
+                        <hr className="card-divider" />
 
                         {/* Footer billing & Quick move button */}
-                        <div class="kanban-card-footer">
-                          <div>
-                            <span class="kanban-card-amount">₹{c.amount.toLocaleString('en-IN')}</span>
-                            <div style={{ fontSize: '9.5px', marginTop: '1px' }}>
-                              <span class={`badge-payment-${c.paymentStatus.toLowerCase()}`} style={{ padding: '0px 4px', borderRadius: '3px', fontSize: '9px', fontWeight: 'bold' }}>
-                                {c.paymentStatus}
-                              </span>
-                            </div>
+                        <div className="card-footer-row" style={{ marginTop: '0' }}>
+                          <div style={{ flex: 1 }} onClick={() => onViewCustomer(c.id)}>
+                            <span className="card-amount" style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-white)' }}>₹{c.amount.toLocaleString('en-IN')}</span>
                           </div>
 
-                          <button
-                            class="kanban-card-move-btn"
-                            onClick={() => openMoveModal(c.id, c.stage)}
-                          >
-                            Move Stage &rsaquo;
-                          </button>
+                          <div className="footer-actions">
+                            <button
+                              className="action-circle"
+                              title="Call"
+                              onClick={() => window.location.href = `tel:${c.phone}`}
+                            >
+                              📞
+                            </button>
+                            <button
+                              className="action-circle"
+                              title="Move Stage"
+                              onClick={() => openMoveModal(c.id, c.stage)}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    ))
+                    );})
                   )}
                 </div>
               </div>
@@ -250,133 +255,88 @@ export default function Pipeline({ onViewCustomer }) {
 
       {/* MODAL 2: PIPELINE STAGES SETTINGS (MANAGE COLUMNS) */}
       {isSettingsOpen && (
-        <div class="modal-overlay drawer-overlay">
-          <div class="modal-content bottom-sheet" style={{ maxWidth: '550px', borderRadius: '20px 20px 0 0' }}>
-            <div class="bottom-sheet-handle mobile-only"></div>
-            <div class="modal-header">
-              <h3>Pipeline Stage Manager</h3>
-              <button class="modal-close-btn" onClick={() => setIsSettingsOpen(false)}>&times;</button>
+        <div className="modal-overlay drawer-overlay">
+          <div className="modal-content bottom-sheet" style={{ maxWidth: '550px', borderRadius: '24px 24px 0 0', backgroundColor: '#1e2433' }}>
+            <div className="bottom-sheet-handle mobile-only"></div>
+            <div className="modal-header" style={{ padding: '24px 24px 12px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 'bold' }}>Manage Pipeline Stages</h3>
+              <button className="modal-close-btn" onClick={() => setIsSettingsOpen(false)}>&times;</button>
             </div>
-            <div class="modal-body">
-              {/* STAGES LIST - ACTIONS */}
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Active Columns Layout</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '6px' }}>
-                  {[...stages]
-                    .sort((a, b) => a.stageOrder - b.stageOrder)
-                    .map((s, idx) => (
-                      <div key={s.stageName} style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', padding: '6px 10px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1 }}>
-                          <span class="stage-color-dot" style={{ backgroundColor: s.stageColor }}></span>
-                          {editingStage === s.stageName ? (
-                            <form onSubmit={handleRenameStageSubmit} style={{ display: 'flex', gap: '4px', width: '100%' }}>
-                              <input
-                                type="text"
-                                class="form-input"
-                                style={{ padding: '2px 6px', fontSize: '12px' }}
-                                value={newStageName}
-                                onChange={e => setNewStageName(e.target.value)}
-                                autoFocus
-                                required
-                              />
-                              <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                              <button type="button" class="btn btn-secondary btn-sm" onClick={() => setEditingStage(null)}>x</button>
-                            </form>
-                          ) : (
-                            <span style={{ fontSize: '13px', fontWeight: '600' }}>{s.stageName}</span>
-                          )}
-                        </div>
-
-                        {editingStage !== s.stageName && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-                            {/* Move Up */}
-                            <button
-                              class="action-btn-circle"
-                              style={{ width: '22px', height: '22px', fontSize: '10px' }}
-                              disabled={idx === 0}
-                              onClick={() => handleMoveStageOrder(idx, 'up')}
-                            >
-                              ↑
-                            </button>
-                            {/* Move Down */}
-                            <button
-                              class="action-btn-circle"
-                              style={{ width: '22px', height: '22px', fontSize: '10px' }}
-                              disabled={idx === stages.length - 1}
-                              onClick={() => handleMoveStageOrder(idx, 'down')}
-                            >
-                              ↓
-                            </button>
-                            {/* Rename */}
-                            <button
-                              class="action-btn-circle"
-                              style={{ width: '22px', height: '22px', fontSize: '10px' }}
-                              onClick={() => {
-                                setEditingStage(s.stageName);
-                                setNewStageName(s.stageName);
-                              }}
-                            >
-                              ✎
-                            </button>
-                            {/* Delete (if multiple stages exist) */}
-                            {stages.length > 1 && (
-                              <button
-                                class="action-btn-circle"
-                                style={{ width: '22px', height: '22px', fontSize: '10px', color: 'var(--status-red)' }}
-                                onClick={() => {
-                                  if (confirm(`Are you sure you want to delete stage "${s.stageName}"? Customers in this stage will be re-assigned to first stage.`)) {
-                                    deleteStage(s.stageName);
-                                  }
-                                }}
-                              >
-                                &times;
-                              </button>
-                            )}
-                          </div>
+            <div className="modal-body" style={{ padding: '16px 24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[...stages]
+                  .sort((a, b) => a.stageOrder - b.stageOrder)
+                  .map((s, idx) => (
+                    <div key={s.stageName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', backgroundColor: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexGrow: 1 }}>
+                        <span className="stage-color-dot" style={{ backgroundColor: s.stageColor, width: '16px', height: '16px' }}></span>
+                        {editingStage === s.stageName ? (
+                          <form onSubmit={handleRenameStageSubmit} style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                            <input
+                              type="text"
+                              className="form-input"
+                              style={{ padding: '4px 8px', fontSize: '14px', borderRadius: '6px' }}
+                              value={newStageName}
+                              onChange={e => setNewStageName(e.target.value)}
+                              autoFocus
+                              required
+                            />
+                            <button type="submit" className="btn btn-primary btn-sm">Save</button>
+                            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingStage(null)}>x</button>
+                          </form>
+                        ) : (
+                          <span style={{ fontSize: '15px', fontWeight: '600', color: '#fff' }}>{s.stageName}</span>
                         )}
                       </div>
-                    ))}
-                </div>
+
+                      {editingStage !== s.stageName && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button
+                            className="action-btn-circle"
+                            style={{ background: 'transparent', color: 'var(--text-muted)' }}
+                            onClick={() => {
+                              setEditingStage(s.stageName);
+                              setNewStageName(s.stageName);
+                            }}
+                          >
+                            ✎
+                          </button>
+                          {stages.length > 1 && (
+                            <button
+                              className="action-btn-circle"
+                              style={{ background: 'transparent', color: 'var(--text-muted)' }}
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete stage "${s.stageName}"?`)) {
+                                  deleteStage(s.stageName);
+                                }
+                              }}
+                            >
+                              🗑
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
               </div>
 
-              {/* CREATE STAGE SECTION */}
-              <div style={{ paddingTop: '15px', borderTop: '1px solid var(--border-color)' }}>
-                <h4 style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '10px' }}>Create Custom Stage</h4>
-                <form onSubmit={handleAddStageSubmit}>
-                  <div class="form-grid two-col">
-                    <div>
-                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>Stage Name</label>
-                      <input
-                        type="text"
-                        class="form-input"
-                        placeholder="e.g. In Production"
-                        value={addStageName}
-                        onChange={e => setAddStageName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>Column Dot Color</label>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <input
-                           type="color"
-                           class="form-input"
-                           style={{ padding: '0', height: '36px', width: '50px', cursor: 'pointer' }}
-                           value={addStageColor}
-                           onChange={e => setAddStageColor(e.target.value)}
-                        />
-                        <span style={{ fontSize: '12px', fontFamily: 'monospace' }}>{addStageColor}</span>
-                      </div>
-                    </div>
-                    <div class="form-group-full" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-                      <button type="submit" class="btn btn-primary btn-sm">Add Stage</button>
-                    </div>
-                  </div>
-                </form>
+              {/* CREATE STAGE */}
+              <div style={{ marginTop: '24px' }}>
+                <button
+                  className="btn"
+                  style={{ width: '100%', padding: '12px', background: 'transparent', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', display: 'flex', justifyContent: 'center', gap: '8px', borderRadius: '12px' }}
+                  onClick={() => {
+                    const name = prompt("Enter new stage name:");
+                    if (name) addStage(name, '#3b82f6');
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add New Stage
+                </button>
               </div>
-            </div>
-            <div class="modal-footer">
-              <button class="btn btn-secondary" onClick={() => setIsSettingsOpen(false)}>Done</button>
             </div>
           </div>
         </div>

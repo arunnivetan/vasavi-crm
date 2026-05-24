@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { svpLogoBase64 } from './logoBase64';
 
 // Consistent Premium Corporate Palette
 const COLORS = {
@@ -27,70 +28,75 @@ const getLastY = (doc, fallback = 300) => {
 };
 
 // Generic Page Header Helper matching Sri Vasavi Plywoods business credentials
-const drawPDFHeader = (doc, title, docId = '', docDate = '') => {
+const drawPDFHeader = (doc, title, docId = '', docDate = '', customerId = '') => {
   const pageCount = doc.internal.getNumberOfPages();
   const dateFormatted = docDate || new Date().toLocaleDateString('en-IN');
   const numberStr = docId || 'No: CRM-REP';
+  const customerRef = customerId || '';
   
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     
-    // Draw white header background block to clean margins (height capped at 76 to prevent clipping of text at Y=96)
+    // Draw white header background block to clean margins
     doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, 595.28, 76, 'F');
+    doc.rect(0, 0, 595.28, 86, 'F');
     
-    // --- 1. CIRCULAR BLACK LOGO WITH GOLD SVP TEXT ---
-    doc.setFillColor(11, 15, 25); // Dark Black/Navy
-    doc.ellipse(55, 43, 22, 22, 'F');
+    // --- 1. LEFT: SVP LOGO ---
+    try {
+      // Adjusted logo dimensions and placement to fit well on the left
+      doc.addImage(svpLogoBase64, 'PNG', 30, 20, 50, 50);
+    } catch (e) {
+      // Fallback if image fails to load
+      doc.setFillColor(11, 15, 25);
+      doc.ellipse(55, 45, 20, 20, 'F');
+      doc.setTextColor(218, 165, 32);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('SVP', 55, 49, { align: 'center' });
+    }
     
-    doc.setDrawColor(218, 165, 32); // Gold Ring
-    doc.setLineWidth(1.2);
-    doc.ellipse(55, 43, 19, 19, 'S');
-    
-    doc.setTextColor(218, 165, 32); // Gold Text
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.text('SVP', 55, 48, { align: 'center' });
-    
-    doc.setFontSize(3.8);
-    doc.setTextColor(255, 255, 255);
-    doc.text('SRI VASAVI PLYWOOD', 55, 31, { align: 'center' });
-    doc.text('SINCE 1997', 55, 57, { align: 'center' });
-    
-    // --- 2. CENTER CREDENTIALS (SRI VASAVI PLYWOODS) ---
+    // --- 2. CENTER: CREDENTIALS (SRI VASAVI PLYWOODS) ---
+    const centerX = 297.64; // Middle of A4 width (595.28 / 2)
     doc.setTextColor(11, 15, 25);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(15);
-    doc.text('SRI VASAVI PLYWOODS', 90, 36);
+    doc.setFontSize(16);
+    doc.text('SRI VASAVI PLYWOODS', centerX, 36, { align: 'center' });
     
     doc.setTextColor(108, 117, 125);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('GLASSWARES & HARDWARES', 90, 48);
+    doc.text('GLASSWARES & HARDWARES', centerX, 48, { align: 'center' });
     
     doc.setTextColor(108, 117, 125);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.text('M.R.V. Building, Poovalur Road, Lalgudi-621601', 90, 58);
+    doc.text('M.R.V. Building, Poovalur Road, Lalgudi-621601', centerX, 58, { align: 'center' });
+    doc.text('Ph: 9842438037 | GSTIN: 33APXPS6615P1ZC', centerX, 68, { align: 'center' });
 
-    // --- 3. TOP RIGHT METADATA (GSTIN, CELL) ---
+    // --- 3. RIGHT: BILL & CUSTOMER METADATA ---
     doc.setTextColor(33, 43, 54);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('GSTIN: 33APXPS6615P1ZC', 565.28, 33, { align: 'right' });
-    doc.text('CELL:9842438037', 565.28, 45, { align: 'right' });
+    
+    // Calculate right-aligned positions
+    const rightMargin = 565.28;
+    doc.text(`BILL NO: ${numberStr}`, rightMargin, 38, { align: 'right' });
+    doc.text(`BILL DATE: ${dateFormatted}`, rightMargin, 50, { align: 'right' });
+    if (customerRef) {
+      doc.text(`CUSTOMER ID: ${customerRef}`, rightMargin, 62, { align: 'right' });
+    }
     
     // --- 4. THIN GOLD DIVIDER LINE BELOW HEADER ---
     doc.setDrawColor(218, 165, 32);
     doc.setLineWidth(1);
-    doc.line(30, 76, 565.28, 76);
+    doc.line(30, 86, 565.28, 86);
     
     // --- 5. PAGE NUMBER & TIMESTAMP FOOTER ---
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(...COLORS.TEXT_MUTED);
     doc.text(`Sri Vasavi Plywoods — Lalgudi`, 30, 820);
-    doc.text(`${new Date().toLocaleDateString('en-IN')}, ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}`, 565.28 - doc.getTextWidth(`${new Date().toLocaleDateString('en-IN')}, ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}`), 820);
+    doc.text(`${new Date().toLocaleDateString('en-IN')}, ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}`, rightMargin - doc.getTextWidth(`${new Date().toLocaleDateString('en-IN')}, ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}`), 820);
   }
 };
 
@@ -259,6 +265,8 @@ export const generateAllCustomersPDF = (customers, payments, stages, action = 'd
     } else {
       alert('Popup blocker active. Please allow popups to view the PDF report.');
     }
+  } else if (action === 'preview') {
+    return doc.output('datauristring');
   } else {
     doc.save(`SriVasavi_Master_Customer_Report_${Date.now()}.pdf`);
   }
@@ -270,10 +278,13 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
   const doc = new jsPDF({ format: 'a4', unit: 'pt' });
   
   const profileId = `CL-${customer.id ? customer.id.split('_')[1] : 'FILE'}`;
+  const billTag = (customer.tags || []).find(t => t.startsWith('BILL:'));
+  const displayBillNo = billTag ? billTag.split(':')[1] : `EST-${Date.now().toString().substring(6)}`;
+  
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(`No: ${profileId}`, 30, 102);
+  doc.text(`No: ${displayBillNo}`, 30, 102);
   doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 565.28, 102, { align: 'right' });
 
   // Title
@@ -556,7 +567,7 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
   doc.text('Customer Signature', 105, finalY + 52, { align: 'center' });
   doc.text('Authorized Signature', 490, finalY + 52, { align: 'center' });
 
-  drawPDFHeader(doc, `Customer Profile: ${customer.customerName}`, profileId, new Date().toLocaleDateString('en-IN'));
+  drawPDFHeader(doc, `Customer Profile: ${customer.customerName}`, displayBillNo, new Date().toLocaleDateString('en-IN'), profileId);
   
   if (action === 'print' || action === 'share') {
     const newWindow = window.open('', '_blank');
@@ -565,6 +576,8 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
     } else {
       alert('Popup blocker active. Please allow popups to view the PDF report.');
     }
+  } else if (action === 'preview') {
+    return doc.output('datauristring');
   } else {
     doc.save(`CustomerProfile_${customer.customerName.replace(/\s+/g, '_')}.pdf`);
   }
@@ -575,7 +588,9 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
 export const generateInvoicePDF = (customer, paymentsList, action = 'download') => {
   const doc = new jsPDF({ format: 'a4', unit: 'pt' });
 
-  const invoiceId = `INV-${Date.now().toString().substring(6)}`;
+  const billTag = (customer.tags || []).find(t => t.startsWith('BILL:'));
+  const invoiceId = billTag ? billTag.split(':')[1] : `INV-${Date.now().toString().substring(6)}`;
+  const profileId = `CL-${customer.id ? customer.id.split('_')[1] : 'FILE'}`;
 
   // Document Number & Date below gold line
   doc.setFont('helvetica', 'bold');
@@ -775,7 +790,7 @@ export const generateInvoicePDF = (customer, paymentsList, action = 'download') 
   doc.text('This is a system-generated document. For Sri Vasavi Plywoods.', 30, sigY + 78);
 
   // Draw Header
-  drawPDFHeader(doc, 'Sales Tax Invoice', invoiceId, new Date().toLocaleDateString('en-IN'));
+  drawPDFHeader(doc, 'Sales Tax Invoice', invoiceId, new Date().toLocaleDateString('en-IN'), profileId);
   
   if (action === 'print' || action === 'share') {
     const newWindow = window.open('', '_blank');
@@ -784,6 +799,8 @@ export const generateInvoicePDF = (customer, paymentsList, action = 'download') 
     } else {
       alert('Popup blocker active. Please allow popups to view the PDF report.');
     }
+  } else if (action === 'preview') {
+    return doc.output('datauristring');
   } else {
     doc.save(`Invoice_${customer.customerName.replace(/\s+/g, '_')}.pdf`);
   }
@@ -996,6 +1013,8 @@ export const generateQuotationPDF = (customer, action = 'download') => {
     } else {
       alert('Popup blocker active. Please allow popups to view the PDF report.');
     }
+  } else if (action === 'preview') {
+    return doc.output('datauristring');
   } else {
     doc.save(`Quotation_${customer.customerName.replace(/\s+/g, '_')}.pdf`);
   }
@@ -1074,6 +1093,8 @@ export const generateCustomerHistoryPDF = (customer, activityList, action = 'dow
     } else {
       alert('Popup blocker active. Please allow popups to view the PDF report.');
     }
+  } else if (action === 'preview') {
+    return doc.output('datauristring');
   } else {
     doc.save(`ActivityLog_${customer.customerName.replace(/\s+/g, '_')}.pdf`);
   }
