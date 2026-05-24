@@ -477,6 +477,7 @@ export default function CustomerDetail({ customerId, onBack }) {
                     <span class="info-label">ITEMS & MATERIALS</span>
                   </div>
                 </div>
+                {customer.items && customer.items.length > 0 ? (
                   <div style={{
                     marginTop: '8px',
                     display: 'flex',
