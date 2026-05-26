@@ -622,15 +622,27 @@ a:hover {
   border-color: var(--border-hover);
   background-color: var(--bg-card-hover);
 }
-.action-btn-circle.whatsapp:hover {
+.action-btn-circle.whatsapp {
+  background: rgba(37, 211, 102, 0.08);
   color: #25D366;
-  border-color: rgba(37, 211, 102, 0.4);
-  background-color: rgba(37, 211, 102, 0.1);
+  border-color: rgba(37, 211, 102, 0.2);
+}
+.action-btn-circle.whatsapp:hover {
+  color: #fff;
+  border-color: #25D366;
+  background-color: #25D366;
+  transform: scale(1.05);
+}
+.action-btn-circle.call {
+  background: rgba(16, 185, 129, 0.08);
+  color: #10B981;
+  border-color: rgba(16, 185, 129, 0.2);
 }
 .action-btn-circle.call:hover {
-  color: #10B981;
-  border-color: rgba(16, 185, 129, 0.4);
-  background-color: rgba(16, 185, 129, 0.1);
+  color: #fff;
+  border-color: #10B981;
+  background-color: #10B981;
+  transform: scale(1.05);
 }
 .action-btn-circle.accent:hover {
   color: var(--accent);
@@ -3120,8 +3132,10 @@ a:hover {
   border: none;
 }
 
-.action-circle.call { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-.action-circle.whatsapp { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.action-circle.call { background: rgba(59, 130, 246, 0.15); color: #3b82f6; transition: all 0.2s ease; cursor: pointer; }
+.action-circle.call:hover { background: #3b82f6; color: #fff; transform: scale(1.05); }
+.action-circle.whatsapp { background: rgba(37, 211, 102, 0.15); color: #25D366; transition: all 0.2s ease; cursor: pointer; }
+.action-circle.whatsapp:hover { background: #25D366; color: #fff; transform: scale(1.05); }
 
 .btn-open-details {
   background: var(--accent-glow);

@@ -44,7 +44,7 @@ const drawPDFHeader = (doc, title, docId = '', docDate = '', customerId = '') =>
     // --- 1. LEFT: SVP LOGO ---
     try {
       // Adjusted logo dimensions and placement to fit well on the left
-      doc.addImage(svpLogoBase64, 'PNG', 30, 20, 50, 50);
+      doc.addImage(svpLogoBase64, 'PNG', 30, 8, 70, 70);
     } catch (e) {
       // Fallback if image fails to load
       doc.setFillColor(11, 15, 25);
@@ -82,9 +82,6 @@ const drawPDFHeader = (doc, title, docId = '', docDate = '', customerId = '') =>
     const rightMargin = 565.28;
     doc.text(`BILL NO: ${numberStr}`, rightMargin, 38, { align: 'right' });
     doc.text(`BILL DATE: ${dateFormatted}`, rightMargin, 50, { align: 'right' });
-    if (customerRef) {
-      doc.text(`CUSTOMER ID: ${customerRef}`, rightMargin, 62, { align: 'right' });
-    }
     
     // --- 4. THIN GOLD DIVIDER LINE BELOW HEADER ---
     doc.setDrawColor(218, 165, 32);
@@ -284,7 +281,6 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(`No: ${displayBillNo}`, 30, 102);
   doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 565.28, 102, { align: 'right' });
 
   // Title
@@ -377,7 +373,7 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
       item.qty || 0,
       item.unit || 'Pcs',
       Number(item.rate || 0).toLocaleString('en-IN'),
-      customer.taxPercent ? `${customer.taxPercent}%` : '18%',
+      (customer.taxPercent !== undefined && customer.taxPercent !== null) ? `${customer.taxPercent}%` : '18%',
       Number(item.total || 0).toLocaleString('en-IN')
     ]);
     
@@ -596,7 +592,6 @@ export const generateInvoicePDF = (customer, paymentsList, action = 'download') 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(`No: ${invoiceId}`, 30, 102);
   doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 565.28, 102, { align: 'right' });
 
   // TO Customer Section
@@ -692,7 +687,7 @@ export const generateInvoicePDF = (customer, paymentsList, action = 'download') 
         item.qty || 0,
         item.unit || 'Pcs',
         `Rs. ${Number(item.rate || 0).toLocaleString('en-IN')}`,
-        customer.taxPercent ? `${customer.taxPercent}%` : '18%',
+        (customer.taxPercent !== undefined && customer.taxPercent !== null) ? `${customer.taxPercent}%` : '18%',
         `Rs. ${Number(item.total || 0).toLocaleString('en-IN')}`
       ])
     : [
@@ -817,7 +812,6 @@ export const generateQuotationPDF = (customer, action = 'download') => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(`No: ${quotationId}`, 30, 102);
   doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 565.28, 102, { align: 'right' });
 
   // TO Customer Section
@@ -909,7 +903,7 @@ export const generateQuotationPDF = (customer, action = 'download') => {
         item.qty || 0,
         item.unit || 'Pcs',
         `Rs. ${Number(item.rate || 0).toLocaleString('en-IN')}`,
-        customer.taxPercent ? `${customer.taxPercent}%` : '18%',
+        (customer.taxPercent !== undefined && customer.taxPercent !== null) ? `${customer.taxPercent}%` : '18%',
         `Rs. ${Number(item.total || 0).toLocaleString('en-IN')}`
       ])
     : [
@@ -1031,7 +1025,6 @@ export const generateCustomerHistoryPDF = (customer, activityList, action = 'dow
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(`No: ${historyId}`, 30, 102);
   doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 565.28, 102, { align: 'right' });
 
   doc.setFontSize(11);

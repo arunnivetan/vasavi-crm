@@ -32,7 +32,9 @@ export default function Dashboard({ onViewCustomer }) {
     logPdfGeneration,
     refreshDatabase,
     isLoading,
-    addCustomer
+    addCustomer,
+    addStage,
+    renameStage
   } = useCRMDatabase();
 
   // --- FILTERS STATE ---
@@ -208,15 +210,18 @@ export default function Dashboard({ onViewCustomer }) {
     const phone = c.phone || '';
     const requirement = c.requirement || '';
     const address = c.address || '';
+    const billTag = (c.tags || []).find(t => t.startsWith('BILL:')) || '';
+    const billNumber = billTag ? billTag.split(':')[1] : '';
 
     const matchesSearch =
       name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       phone.includes(searchTerm) ||
       requirement.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      address.toLowerCase().includes(searchTerm.toLowerCase());
+      address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      billNumber.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStage = selectedStage === 'All' || c.stage === selectedStage;
-    const matchesStaff = selectedStaff === 'All' || c.assignedStaff === selectedStaff;
+    const matchesStaff = selectedStaff === 'All' || c.assignedStaff === selectedStage || c.assignedStaff === selectedStaff; // Backwards compatibility stage match
     const matchesPriority = selectedPriority === 'All' || c.priority === selectedPriority;
 
     return matchesSearch && matchesStage && matchesStaff && matchesPriority;
@@ -661,18 +666,37 @@ export default function Dashboard({ onViewCustomer }) {
         `}} />
 
         {/* 1. Header Section */}
-        <div className="erp-modal-header">
-          <div>
-            <h2 style={{ fontSize: '20px', fontWeight: '800', fontFamily: 'var(--font-display)', color: 'var(--text-white)', letterSpacing: '-0.5px' }}>
-              Create New Client File
-            </h2>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Manage customer projects, materials, billing, and follow-ups
-            </p>
+        <div className="erp-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              className="action-btn-circle"
+              onClick={() => setIsAddModalOpen(false)}
+              title="Return to Dashboard"
+              style={{ minWidth: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </button>
+            <div>
+              <h2 style={{ fontSize: '20px', fontWeight: '800', fontFamily: 'var(--font-display)', color: 'var(--text-white)', letterSpacing: '-0.5px', margin: 0 }}>
+                Create New Client File
+              </h2>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
+                Manage customer projects, materials, billing, and follow-ups
+              </p>
+            </div>
           </div>
-          <div className="erp-modal-header-actions">
-            <button type="button" className="btn btn-secondary" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '500' }} onClick={() => setIsAddModalOpen(false)}>
-              Save Draft
+          <div className="erp-modal-header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}
+              onClick={() => setIsAddModalOpen(false)}
+            >
+              Dashboard
             </button>
             <button
               type="button"
@@ -681,11 +705,13 @@ export default function Dashboard({ onViewCustomer }) {
                 border: 'none',
                 boxShadow: '0 4px 14px rgba(212, 166, 79, 0.35)',
                 fontWeight: '700',
-                fontSize: '12.5px',
-                padding: '7px 16px',
+                fontSize: '13px',
+                padding: '8px 24px',
                 borderRadius: '8px',
                 opacity: isSaving ? 0.7 : 1,
-                cursor: isSaving ? 'not-allowed' : 'pointer'
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                backgroundColor: 'var(--accent)',
+                color: '#000'
               }}
               disabled={isSaving}
               onClick={handleCreateCustomer}
@@ -745,14 +771,6 @@ export default function Dashboard({ onViewCustomer }) {
                     <option value="Laminate">Laminates & Veneers</option>
                     <option value="Interior design">Interior Fit-out</option>
                     <option value="Contractor Work">Contractor Billing</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="ag-form-label">Sales Stage</label>
-                  <select className="erp-input-inline" style={{ padding: '8px 12px', fontSize: '13px', height: '36px' }} value={newCustStage} onChange={e => setNewCustStage(e.target.value)}>
-                    {stages.map(s => (
-                      <option key={s.stageName} value={s.stageName}>{s.stageName}</option>
-                    ))}
                   </select>
                 </div>
               </div>
@@ -1427,88 +1445,105 @@ export default function Dashboard({ onViewCustomer }) {
         </div>
       </div>
 
-      {/* WARNINGS & ALERTS SECTION */}
-      <div class="alerts-container">
-        {/* Overdue Followup panel */}
-        <div class="alert-panel danger">
-          <div class="alert-panel-title" style={{ color: 'var(--status-red)' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            Overdue Follow-ups ({overdueFollowups.length})
+      {/* PIPELINE STAGES OVERVIEW SUMMARY WIDGET */}
+      <div className="erp-card" style={{ padding: '16px 20px', marginBottom: '24px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '16px' }}>📊</span>
+            <span style={{ fontSize: '14px', fontWeight: '700', fontFamily: 'var(--font-display)', color: 'var(--text-white)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Pipeline Stages Overview
+            </span>
           </div>
-          <div class="alert-item-list">
-            {(overdueFollowups || []).length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '10px' }}>No overdue follow-ups!</div>
-            ) : (
-              (overdueFollowups || []).map(r => {
-                const c = (customers || []).find(x => x.id === r?.customerId) || {};
-                return (
-                  <div class="alert-item" key={r?.id} onClick={() => onViewCustomer(c?.id)} style={{ cursor: 'pointer' }}>
-                    <span class="alert-item-text">{c?.customerName || 'Unknown'}</span>
-                    <span class="alert-item-time" style={{ color: 'var(--status-red)', fontWeight: '600' }}>
-                      {(r?.reminderDate || '').split('T')[0] || 'No Date'}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Upcoming followups */}
-        <div class="alert-panel warning">
-          <div class="alert-panel-title" style={{ color: 'var(--status-yellow)' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            Upcoming Reminders (3 Days) ({upcomingFollowups.length})
-          </div>
-          <div class="alert-item-list">
-            {(upcomingFollowups || []).length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '10px' }}>No upcoming reminders.</div>
-            ) : (
-              (upcomingFollowups || []).map(r => {
-                const c = (customers || []).find(x => x.id === r?.customerId) || {};
-                return (
-                  <div class="alert-item" key={r?.id} onClick={() => onViewCustomer(c?.id)} style={{ cursor: 'pointer' }}>
-                    <span class="alert-item-text">{c?.customerName || 'Unknown'}</span>
-                    <span class="alert-item-time" style={{ color: 'var(--status-yellow)' }}>
-                      {(r?.reminderDate || '').split('T')[0] || 'No Date'}
-                    </span>
-                  </div>
-                );
-              })
-            )}
+          {/* OPTIONAL ACTIONS */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: '11px', padding: '4px 10px', height: '26px', borderRadius: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+              onClick={() => {
+                const name = prompt("Enter new stage name:");
+                if (name) addStage(name, '#3b82f6');
+              }}
+            >
+              + Add Stage
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: '11px', padding: '4px 10px', height: '26px', borderRadius: '15px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+              onClick={() => {
+                const name = prompt("Enter stage name to rename:");
+                if (name) {
+                  const newName = prompt(`Enter new name for stage "${name}":`);
+                  if (newName) renameStage(name, newName);
+                }
+              }}
+            >
+              ✎ Edit Stage
+            </button>
           </div>
         </div>
 
-        {/* Pending payments alerts */}
-        <div class="alert-panel info">
-          <div class="alert-panel-title" style={{ color: 'var(--status-blue)' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
-              <line x1="12" y1="4" x2="12" y2="20"></line>
-            </svg>
-            Pending Payments Collection ({pendingPaymentAlerts.length})
-          </div>
-          <div class="alert-item-list">
-            {(pendingPaymentAlerts || []).length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '10px' }}>All collections cleared!</div>
-            ) : (
-              (pendingPaymentAlerts || []).map(c => (
-                <div class="alert-item" key={c?.id} onClick={() => onViewCustomer(c?.id)} style={{ cursor: 'pointer' }}>
-                  <span class="alert-item-text">{c?.customerName || 'Unknown'}</span>
-                  <span class="alert-item-time" style={{ color: 'var(--status-red)', fontWeight: '600' }}>
-                    ₹{c?.pendingAmount || 0} due
+        {/* Compact Grid of Stage Rows */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
+          {[...stages]
+            .sort((a, b) => a.stageOrder - b.stageOrder)
+            .map(stg => {
+              const count = (customers || []).filter(c => c.stage === stg.stageName).length;
+              return (
+                <div
+                  key={stg.stageName}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(0,0,0,0.15)',
+                    border: '1px solid rgba(255,255,255,0.03)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: stg.stageColor,
+                        flexShrink: 0
+                      }}
+                    ></span>
+                    <span
+                      style={{
+                        fontSize: '12.5px',
+                        fontWeight: '600',
+                        color: 'var(--text-white)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title={stg.stageName}
+                    >
+                      {stg.stageName}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      color: count > 0 ? 'var(--accent)' : 'var(--text-muted)',
+                      backgroundColor: count > 0 ? 'rgba(212, 166, 79, 0.1)' : 'rgba(255,255,255,0.02)',
+                      padding: '2px 6px',
+                      borderRadius: '10px',
+                      minWidth: '20px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {count}
                   </span>
                 </div>
-              ))
-            )}
-          </div>
+              );
+            })}
         </div>
       </div>
 
@@ -1715,7 +1750,7 @@ export default function Dashboard({ onViewCustomer }) {
                             {/* WhatsApp */}
                             {c.phone && (
                               <a
-                                href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName || '')},%20this%20is%20regarding%20your%20requirement%20for%20${encodeURIComponent(c.requirement || '')}.`}
+                                href={`https://wa.me/${c.phone.replace(/[^0-9+]/g, '')}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="action-btn-circle whatsapp"
@@ -1871,7 +1906,7 @@ export default function Dashboard({ onViewCustomer }) {
                           )}
                           {c.phone && (
                             <a
-                              href={`https://wa.me/91${c.phone}?text=Hello%20${encodeURIComponent(c.customerName || '')},%20this%20is%20regarding%20your%20requirement%20for%20${encodeURIComponent(c.requirement || '')}.`}
+                              href={`https://wa.me/${c.phone.replace(/[^0-9+]/g, '')}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="action-circle whatsapp"

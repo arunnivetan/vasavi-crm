@@ -390,6 +390,20 @@ export default function CustomerDetail({ customerId, onBack }) {
                 </svg>
               </a>
             )}
+            {customer.phone && (
+              <a
+                href={`https://wa.me/${customer.phone.replace(/[^0-9+]/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="action-btn-circle whatsapp success"
+                style={{ textDecoration: 'none', backgroundColor: 'rgba(37, 211, 102, 0.15)', color: '#25D366' }}
+                title="Message Customer"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                </svg>
+              </a>
+            )}
             <div className="action-btn-circle">...</div>
           </div>
         </div>
@@ -421,9 +435,6 @@ export default function CustomerDetail({ customerId, onBack }) {
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="btn btn-secondary btn-sm" onClick={() => setIsPDFPreviewOpen(true)} style={{ flex: 1, padding: '8px', display: 'flex', justifyContent: 'center', gap: '6px' }}>
             <span>📄</span> PDF Preview
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => handleExportProfile('print')} style={{ padding: '8px 14px' }} title="Print Profile">
-            🖨️ Print
           </button>
           <button
             className="btn btn-primary btn-sm"
@@ -625,22 +636,7 @@ export default function CustomerDetail({ customerId, onBack }) {
               </div>
             </div>
 
-            {/* Invoicing and Paid triggers */}
-            <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
-              <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
-                <button class="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => handleExportInvoice('download')} title="Download Invoice PDF">
-                  View invoice
-                </button>
-                <button class="btn btn-secondary btn-sm btn-circle" style={{ width: '32px', height: '32px', borderRadius: '50%', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleExportInvoice('print')} title="View / Print Invoice PDF">
-                  🖨️
-                </button>
-              </div>
-              {customer.pendingAmount > 0 && (
-                <button class="btn btn-success btn-sm" style={{ flex: 1 }} onClick={() => markCustomerPaid(customerId)}>
-                  Mark Paid
-                </button>
-              )}
-            </div>
+
 
             {/* Mini payment ledger history */}
             {customerPayments.length > 0 && (
@@ -667,23 +663,47 @@ export default function CustomerDetail({ customerId, onBack }) {
           {/* Quick Core Actions list */}
           <div class="detail-card">
             <div class="detail-card-title">QUICK ACTIONS</div>
-            <div class="quick-actions-panel">
-              <button class="btn btn-secondary btn-sm" onClick={() => setIsMoveStageOpen(true)}>Move Stage</button>
-              <button class="btn btn-secondary btn-sm" onClick={() => setIsAddReminderOpen(true)}>Set Reminder</button>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button class="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => handleExportQuotation('download')}>Export Estimate</button>
-                <button class="btn btn-secondary btn-sm btn-circle" style={{ width: '32px', height: '32px', borderRadius: '50%', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleExportQuotation('print')} title="View / Print Estimate">
-                  🖨️
+            <div class="quick-actions-panel" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                className="btn btn-secondary"
+                style={{ width: '100%', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600' }}
+                onClick={() => setIsMoveStageOpen(true)}
+              >
+                🔄 Move Stage
+              </button>
+              
+              <button
+                className="btn btn-secondary"
+                style={{ width: '100%', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600' }}
+                onClick={() => setIsAddReminderOpen(true)}
+              >
+                📅 Set Reminder
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                style={{ width: '100%', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600' }}
+                onClick={() => handleExportQuotation('download')}
+              >
+                💵 Export Bill
+              </button>
+
+              {customer.pendingAmount > 0 && (
+                <button
+                  className="btn btn-success"
+                  style={{ width: '100%', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600' }}
+                  onClick={() => markCustomerPaid(customerId)}
+                >
+                  ✅ Mark Paid
                 </button>
-              </div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button class="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => handleExportHistory('download')}>Export History</button>
-                <button class="btn btn-secondary btn-sm btn-circle" style={{ width: '32px', height: '32px', borderRadius: '50%', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleExportHistory('print')} title="View / Print History">
-                  🖨️
-                </button>
-              </div>
-              <button class="btn btn-danger btn-sm" style={{ gridColumn: '1 / -1', marginTop: '6px' }} onClick={handleDeleteCustomerClick}>
-                Delete Customer File
+              )}
+
+              <button
+                className="btn btn-danger"
+                style={{ width: '100%', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', marginTop: '6px' }}
+                onClick={handleDeleteCustomerClick}
+              >
+                🗑️ Delete Customer
               </button>
             </div>
           </div>
@@ -1739,7 +1759,16 @@ export default function CustomerDetail({ customerId, onBack }) {
           <div className="modal-content" style={{ maxWidth: '700px', borderRadius: '16px', backgroundColor: 'var(--bg-main)', overflow: 'hidden' }}>
             <div className="modal-header" style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>📄 Document Preview</h3>
-              <button className="modal-close-btn" onClick={() => setIsPDFPreviewOpen(false)}>&times;</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '13px', border: 'none', fontWeight: '700' }}
+                  onClick={() => { handleExportProfile('download'); setIsPDFPreviewOpen(false); }}
+                >
+                  Download PDF
+                </button>
+                <button className="modal-close-btn" style={{ fontSize: '24px' }} onClick={() => setIsPDFPreviewOpen(false)}>&times;</button>
+              </div>
             </div>
             <div className="modal-body" style={{ padding: '24px', maxHeight: '60vh', overflowY: 'auto' }}>
               {/* Preview Content */}
@@ -1748,7 +1777,7 @@ export default function CustomerDetail({ customerId, onBack }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #dab920', paddingBottom: '20px', marginBottom: '20px' }}>
                   {/* LEFT: LOGO */}
                   <div style={{ flex: '1' }}>
-                    <img src="/src/assets/svp-logo.png" alt="SVP Logo" style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
+                    <img src="/src/assets/svp-logo.png" alt="SVP Logo" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
                   </div>
                   
                   {/* CENTER: COMPANY DETAILS */}
@@ -1763,7 +1792,6 @@ export default function CustomerDetail({ customerId, onBack }) {
                   <div style={{ flex: '1', textAlign: 'right' }}>
                     <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>BILL NO: <span style={{ color: '#666', fontWeight: 'normal' }}>{billNumber}</span></p>
                     <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>BILL DATE: <span style={{ color: '#666', fontWeight: 'normal' }}>{new Date().toLocaleDateString('en-IN')}</span></p>
-                    <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>CUSTOMER ID: <span style={{ color: '#666', fontWeight: 'normal' }}>CL-{customer.id ? customer.id.split('_')[1] : 'FILE'}</span></p>
                   </div>
                 </div>
                 
@@ -1832,11 +1860,6 @@ export default function CustomerDetail({ customerId, onBack }) {
                   </div>
                 </div>
               </div>
-            </div>
-            <div className="modal-footer" style={{ padding: '20px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button className="btn btn-secondary" onClick={() => setIsPDFPreviewOpen(false)}>Cancel</button>
-              <button className="btn btn-secondary" onClick={() => { handleExportProfile('print'); setIsPDFPreviewOpen(false); }}>🖨️ Print Document</button>
-              <button className="btn btn-primary" onClick={() => { handleExportProfile('download'); setIsPDFPreviewOpen(false); }}>⬇️ Download PDF</button>
             </div>
           </div>
         </div>
