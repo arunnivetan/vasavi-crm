@@ -34,7 +34,9 @@ export default function Dashboard({ onViewCustomer }) {
     isLoading,
     addCustomer,
     addStage,
-    renameStage
+    renameStage,
+    logSearchAction,
+    logWhatsAppOpened
   } = useCRMDatabase();
 
   // --- FILTERS STATE ---
@@ -42,6 +44,15 @@ export default function Dashboard({ onViewCustomer }) {
   const [selectedStage, setSelectedStage] = useState('All');
   const [selectedStaff, setSelectedStaff] = useState('All');
   const [selectedPriority, setSelectedPriority] = useState('All');
+
+  // Debounced search logs
+  useEffect(() => {
+    if (!searchTerm.trim()) return;
+    const delayDebounceFn = setTimeout(() => {
+      logSearchAction(searchTerm.trim());
+    }, 1500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   // --- MODALS STATE ---
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -1643,6 +1654,7 @@ export default function Dashboard({ onViewCustomer }) {
                                 rel="noopener noreferrer"
                                 class="action-btn-circle whatsapp"
                                 title="WhatsApp Message"
+                                onClick={() => logWhatsAppOpened(c.id)}
                               >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
@@ -1799,6 +1811,7 @@ export default function Dashboard({ onViewCustomer }) {
                               rel="noopener noreferrer"
                               className="action-circle whatsapp"
                               title="WhatsApp Message"
+                              onClick={() => logWhatsAppOpened(c.id)}
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
@@ -1957,7 +1970,7 @@ export default function Dashboard({ onViewCustomer }) {
                     rel="noopener noreferrer"
                     class="btn btn-secondary"
                     style={{ width: '100%', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '16px', gap: '10px', textDecoration: 'none', color: 'var(--text-white)' }}
-                    onClick={() => setActiveActionCustomerId(null)}
+                    onClick={() => { logWhatsAppOpened(c.id); setActiveActionCustomerId(null); }}
                   >
                     <span style={{ color: '#25D366' }}>💬</span> Chat on WhatsApp
                   </a>

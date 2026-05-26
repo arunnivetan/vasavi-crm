@@ -3169,3 +3169,355 @@ a:hover {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* ============================================================================
+   GLASSMORPHISM LOGIN SYSTEM STYLES
+   ============================================================================ */
+.glass-login-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(4, 8, 16, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.glass-login-box {
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid rgba(212, 166, 79, 0.25);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 420px;
+  padding: 32px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(212, 166, 79, 0.08);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.glass-login-glow {
+  position: absolute;
+  top: -80px;
+  left: -80px;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, rgba(212, 166, 79, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.glass-login-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(212, 166, 79, 0.3);
+}
+
+.glass-profile-btn {
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  outline: none;
+}
+
+.glass-profile-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateX(2px);
+}
+
+.glass-profile-btn.selected {
+  background: rgba(212, 166, 79, 0.06);
+  border-color: var(--profile-color, var(--accent));
+  box-shadow: 0 0 10px rgba(212, 166, 79, 0.03);
+}
+
+.glass-profile-btn .profile-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px var(--profile-color, var(--accent));
+}
+
+.glass-profile-btn .profile-name {
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  flex-grow: 1;
+}
+
+.glass-profile-btn .profile-check {
+  color: var(--profile-color, var(--accent));
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.glass-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Wrong Password Shake Animation */
+.shake-anim {
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.fade-in-element {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================================
+   CRM AUDIT TIMELINE STYLES
+   ============================================================================ */
+.audit-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  padding-left: 12px;
+  margin-top: 16px;
+}
+
+.audit-timeline::before {
+  content: '';
+  position: absolute;
+  left: 31px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.audit-timeline-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  position: relative;
+}
+
+.audit-timeline-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  color: #fff;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.05);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
+
+.audit-timeline-content {
+  flex-grow: 1;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.audit-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.audit-timeline-user {
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+}
+
+.audit-timeline-time {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.audit-timeline-desc {
+  font-size: 12.5px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.audit-timeline-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 8px;
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+/* ============================================================================
+   REMINDER POPUP FLOATING INTERACTION STYLES
+   ============================================================================ */
+.rem-floating-menu {
+  position: absolute;
+  top: 10px;
+  left: 45px;
+  background: #111827;
+  border: 1px solid rgba(212, 166, 79, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  z-index: 10;
+  animation: popoverScale 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popoverScale {
+  from { opacity: 0; transform: scale(0.9) translateY(-5px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.rem-floating-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: #f3f4f6;
+  font-size: 11.5px;
+  font-weight: 600;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.rem-floating-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rem-floating-item.complete:hover {
+  color: var(--status-green);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.rem-floating-item.delete:hover {
+  color: var(--status-red);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.rem-floating-item.snooze:hover {
+  color: var(--status-yellow);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+/* Audit monitor elements */
+.audit-monitor-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--user-color, var(--accent));
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease;
+}
+
+.audit-monitor-item:hover {
+  transform: translateY(-2px);
+}
+
+/* ============================================================================
+   PREMIUM CUSTOM ANIMATIONS & TRANSITIONS
+   ============================================================================ */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.6);
+    transform: scale(1.03);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    transform: scale(1);
+  }
+}
+
+.pulse-glow-red {
+  animation: pulseGlow 1.5s infinite ease-in-out;
+}
+
+@keyframes goldGlow {
+  0% { box-shadow: 0 0 0 0 rgba(212, 166, 79, 0.3); }
+  50% { box-shadow: 0 0 12px 3px rgba(212, 166, 79, 0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(212, 166, 79, 0.1); }
+}
+
+.gold-glow-hover:hover {
+  animation: goldGlow 2s infinite ease-in-out;
+  border-color: var(--accent) !important;
+}
+
+/* Glassmorphism utility updates */
+.glass-blur-premium {
+  background: rgba(11, 17, 32, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(212, 166, 79, 0.15) !important;
+}
+
+

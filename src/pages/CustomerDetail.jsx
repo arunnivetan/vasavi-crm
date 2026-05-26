@@ -28,11 +28,15 @@ export default function CustomerDetail({ customerId, onBack }) {
     snoozeReminder,
     completeReminder,
     deleteCustomer,
+    deleteReminder,
+    restoreReminder,
     uploadCustomerImage,
     getCustomerImages,
     deleteCustomerImage,
-    logPdfGeneration,
-    createBillTransaction
+    createBillTransaction,
+    logWhatsAppOpened,
+    crmUsers,
+    crmUserActivities
   } = useCRMDatabase();
 
   const customer = (customers || []).find(c => c.id === customerId);
@@ -51,6 +55,9 @@ export default function CustomerDetail({ customerId, onBack }) {
   const customerPayments = (payments || []).filter(p => p && p.customerId === customerId);
   const customerActivities = (activities || []).filter(a => a && a.customerId === customerId);
   const customerReminders = (reminders || []).filter(r => r && r.customerId === customerId);
+  const customerUserActivities = (crmUserActivities || [])
+    .filter(a => a && a.customerId === customerId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   // --- STATE STORES ---
   const [activeTab, setActiveTab] = useState('notes'); // 'notes' or 'history'
@@ -64,6 +71,41 @@ export default function CustomerDetail({ customerId, onBack }) {
   const [isSnoozeOpen, setIsSnoozeOpen] = useState(false);
   const [activeReminderId, setActiveReminderId] = useState(null);
   const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
+  const [activeRemMenuId, setActiveRemMenuId] = useState(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteRemId, setDeleteRemId] = useState(null);
+
+  // Close menus on clicking document
+  useEffect(() => {
+    const handleOutsideClick = () => setActiveRemMenuId(null);
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
+
+  const handleCircleClick = (e, remId) => {
+    e.stopPropagation();
+    setActiveRemMenuId(activeRemMenuId === remId ? null : remId);
+  };
+
+  const handleSnoozeClick = (remId) => {
+    setActiveReminderId(remId);
+    setSnoozeDate(todayStr);
+    setIsSnoozeOpen(true);
+    setActiveRemMenuId(null);
+  };
+
+  const handleDeleteClick = (remId) => {
+    setDeleteRemId(remId);
+    setIsDeleteConfirmOpen(true);
+    setActiveRemMenuId(null);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteRemId) return;
+    deleteReminder(deleteRemId);
+    setDeleteRemId(null);
+    setIsDeleteConfirmOpen(false);
+  };
   
   // Lightbox Preview Image state
   const [lightboxImage, setLightboxImage] = useState(null);
@@ -447,6 +489,7 @@ export default function CustomerDetail({ customerId, onBack }) {
                 className="action-btn-circle whatsapp success"
                 style={{ textDecoration: 'none', backgroundColor: 'rgba(37, 211, 102, 0.15)', color: '#25D366' }}
                 title="Message Customer"
+                onClick={() => logWhatsAppOpened(customer.id)}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
@@ -816,28 +859,48 @@ export default function CustomerDetail({ customerId, onBack }) {
           {/* Tab Content 2: Immutable timeline activity ledger */}
           {activeTab === 'history' && (
             <div class="detail-card" style={{ paddingRight: '10px' }}>
-              <div class="activity-timeline">
-                {customerActivities.length === 0 ? (
+              <h3 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-white)' }}>
+                Activity Timeline
+              </h3>
+              <div class="audit-timeline">
+                {customerUserActivities.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                    No activity logs recorded.
+                    No premium activity logs recorded yet.
                   </div>
                 ) : (
-                  customerActivities.map((act, index) => (
-                    <div class={`activity-item ${act.actionType}`} key={index}>
-                      <div class="activity-item-header">
-                        <span class="activity-item-staff">👤 {act.updatedBy}</span>
-                        <span>{new Date(act.timestamp).toLocaleDateString('en-IN')} {new Date(act.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      <div class="activity-item-desc">
-                        <strong>{act.actionType.toUpperCase().replace('_', ' ')}</strong>: {act.newValue}
-                      </div>
-                      {act.oldValue && (
-                        <div class="activity-item-diff">
-                          Previous: {act.oldValue}
+                  customerUserActivities.map((act, index) => {
+                    const user = (crmUsers || []).find(u => u.id === act.userId) || { fullName: 'Staff', activityColor: '#D4A64F' };
+                    return (
+                      <div class="audit-timeline-item animate-slide-in" key={act.id || index} style={{ marginBottom: '12px' }}>
+                        <div class="audit-timeline-avatar" style={{ backgroundColor: user.activityColor, boxShadow: `0 0 8px ${user.activityColor}40`, border: `1.5px solid ${user.activityColor}` }}>
+                          {user.fullName.substring(0, 2).toUpperCase()}
                         </div>
-                      )}
-                    </div>
-                  ))
+                        <div class="audit-timeline-content" style={{ borderLeft: `3px solid ${user.activityColor}` }}>
+                          <div class="audit-timeline-header">
+                            <span class="audit-timeline-user" style={{ color: user.activityColor, fontWeight: '800' }}>
+                              {user.fullName}
+                            </span>
+                            <span class="audit-timeline-time">
+                              {new Date(act.createdAt).toLocaleDateString('en-IN')} {new Date(act.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                            {act.activityType}
+                          </div>
+                          <div class="audit-timeline-desc" style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                            {act.activityDescription}
+                          </div>
+                          {(act.oldValue || act.newValue) && (
+                            <div class="audit-timeline-values" style={{ fontSize: '11px', marginTop: '6px' }}>
+                              {act.oldValue && <span>Previous: <span style={{ color: 'var(--status-red)', fontWeight: '600' }}>{act.oldValue}</span></span>}
+                              {act.oldValue && act.newValue && <span style={{ color: 'var(--text-muted)' }}>|</span>}
+                              {act.newValue && <span>New: <span style={{ color: 'var(--status-green)', fontWeight: '600' }}>{act.newValue}</span></span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -883,43 +946,95 @@ export default function CustomerDetail({ customerId, onBack }) {
                           borderLeft: `4px solid ${r?.status === 'Completed' ? 'var(--status-green)' : isOverdue ? 'var(--status-red)' : 'var(--status-yellow)'}`
                         }}
                       >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: '700', color: r?.status === 'Completed' ? 'var(--text-muted)' : 'var(--text-white)' }}>
-                            {r?.reminderType} {r?.status === 'Completed' && '✓'}
+                        {/* Circle Selector */}
+                        <div style={{ position: 'relative', marginRight: '6px', flexShrink: 0 }}>
+                          {r?.status === 'Completed' || r?.status === 'completed' ? (
+                            <div style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              border: '2px solid var(--status-green)',
+                              background: 'rgba(16, 185, 129, 0.15)',
+                              color: 'var(--status-green)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '11px',
+                              fontWeight: '800'
+                            }}>
+                              ✓
+                            </div>
+                          ) : (
+                            <button
+                              onClick={(e) => handleCircleClick(e, r.id)}
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                border: '2px solid var(--border-color)',
+                                background: activeRemMenuId === r.id ? 'rgba(212, 166, 79, 0.2)' : 'transparent',
+                                color: 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                padding: 0
+                              }}
+                              className="ag-checkbox-round"
+                            >
+                              ●
+                            </button>
+                          )}
+                          
+                          {activeRemMenuId === r.id && (
+                            <div className="rem-floating-menu" onClick={e => e.stopPropagation()} style={{ left: '25px', top: '15px' }}>
+                              <button className="rem-floating-item complete" onClick={() => { completeReminder(r.id); setActiveRemMenuId(null); }}>
+                                <span>✅</span> Mark Complete
+                              </button>
+                              <button className="rem-floating-item snooze" onClick={() => handleSnoozeClick(r.id)}>
+                                <span>⏰</span> Snooze Reminder
+                              </button>
+                              <button className="rem-floating-item delete" onClick={() => handleDeleteClick(r.id)}>
+                                <span>🗑️</span> Delete Reminder
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+                          <span style={{ fontSize: '12px', fontWeight: '700', color: (r?.status === 'Completed' || r?.status === 'completed') ? 'var(--text-muted)' : 'var(--text-white)', textDecoration: (r?.status === 'Completed' || r?.status === 'completed') ? 'line-through' : 'none' }}>
+                            {r?.reminderType} {(r?.status === 'Completed' || r?.status === 'completed') && '(Completed)'}
                           </span>
                           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                             Due: {remDate.replace('T', ' ') || 'No Date'}
                           </span>
-                        {r.notes && (
-                          <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            Note: {r.notes}
-                          </span>
+                          {r.notes && (
+                            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              Note: {r.notes}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Completed actions: restore and delete permanently */}
+                        {(r.status === 'Completed' || r.status === 'completed') && (
+                          <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+                            <button
+                              class="btn btn-secondary btn-sm"
+                              style={{ padding: '3px 8px', fontSize: '10px' }}
+                              onClick={() => restoreReminder(r.id)}
+                            >
+                              Restore ↩️
+                            </button>
+                            <button
+                              class="btn btn-danger btn-sm"
+                              style={{ padding: '3px 8px', fontSize: '10px' }}
+                              onClick={() => handleDeleteClick(r.id)}
+                            >
+                              Delete 🗑️
+                            </button>
+                          </div>
                         )}
                       </div>
-
-                      {r.status !== 'Completed' && (
-                        <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
-                          <button
-                            class="btn btn-secondary btn-sm"
-                            style={{ padding: '3px 8px', fontSize: '10px' }}
-                            onClick={() => {
-                              setActiveReminderId(r.id);
-                              setSnoozeDate(todayStr);
-                              setIsSnoozeOpen(true);
-                            }}
-                          >
-                            Snooze
-                          </button>
-                          <button
-                            class="btn btn-success btn-sm"
-                            style={{ padding: '3px 8px', fontSize: '10px' }}
-                            onClick={() => completeReminder(r.id)}
-                          >
-                            Done
-                          </button>
-                        </div>
-                      )}
-                    </div>
                     );
                   })
               )}
@@ -1913,6 +2028,55 @@ export default function CustomerDetail({ customerId, onBack }) {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- DELETE CONFIRMATION OVERLAY --- */}
+      {isDeleteConfirmOpen && deleteRemId && (
+        <div className="modal-overlay drawer-overlay" style={{ zIndex: 10000 }}>
+          <div 
+            className="modal-content" 
+            style={{ 
+              maxWidth: '360px', 
+              width: '100%', 
+              borderRadius: '20px', 
+              border: '1px solid rgba(239, 68, 68, 0.25)', 
+              boxShadow: '0 10px 30px rgba(239, 68, 68, 0.1)',
+              background: '#0F1624',
+              padding: '24px',
+              textAlign: 'center',
+              animation: 'popoverScale 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
+            }}
+          >
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</div>
+            <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#fff', marginBottom: '8px' }}>Delete Reminder permanently?</h3>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.4' }}>
+              This follow-up checklist card will be permanently deleted from Supabase forever.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button 
+                className="btn btn-secondary" 
+                style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12.5px' }}
+                onClick={() => { setIsDeleteConfirmOpen(false); setDeleteRemId(null); }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-danger pulse-glow-red" 
+                style={{ 
+                  padding: '8px 18px', 
+                  borderRadius: '10px', 
+                  fontSize: '12.5px', 
+                  fontWeight: '700',
+                  boxShadow: '0 4px 15px rgba(239, 68, 68, 0.35)',
+                  border: 'none'
+                }}
+                onClick={handleDeleteConfirm}
+              >
+                Delete 🗑️
+              </button>
             </div>
           </div>
         </div>

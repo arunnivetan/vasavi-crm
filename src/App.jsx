@@ -4,12 +4,15 @@ import Dashboard from './pages/Dashboard';
 import Pipeline from './pages/Pipeline';
 import Reminders from './pages/Reminders';
 import CustomerDetail from './pages/CustomerDetail';
+import LoginModal from './components/LoginModal';
+import AdminActivityMonitor from './pages/AdminActivityMonitor';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'pipeline', 'reminders', 'customer-detail'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'pipeline', 'reminders', 'customer-detail', 'activities'
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   React.useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -49,7 +52,7 @@ function AppContent() {
     setShowInstallBanner(false);
   };
 
-  const { activeStaff, setActiveStaff, staffList } = useCRMDatabase();
+  const { currentUser, logoutUser } = useCRMDatabase();
 
   const handleViewCustomer = (customerId) => {
     setSelectedCustomerId(customerId);
@@ -61,9 +64,14 @@ function AppContent() {
     setCurrentView('dashboard');
   };
 
+  // Require Login Modal
+  if (!currentUser) {
+    return <LoginModal />;
+  }
+
   return (
     <div class="app-container">
-      {/* GLOBAL BRAND HEADER & STAFF ASSIGNMENT BAR */}
+      {/* GLOBAL BRAND HEADER & STAFF PROFILE CARD */}
       <header class="header-bar">
         <div class="brand-section">
           <div className="brand-logo" style={{ width: '44px', height: '44px', flexShrink: 0, background: 'none', boxShadow: 'none' }}>
@@ -97,20 +105,65 @@ function AppContent() {
         </div>
 
         {/* Executive Staff Profile Swapper */}
-        <div class="user-avatar-selector">
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '500' }}>Active Representative:</span>
-          <select
-            class="staff-dropdown-select"
-            value={activeStaff}
-            onChange={e => setActiveStaff(e.target.value)}
+        <div class="user-avatar-selector" style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setShowProfileDropdown(!showProfileDropdown)}>
+          <div 
+            class="staff-avatar" 
+            title={`Logged in as ${currentUser.fullName}`}
+            style={{ 
+              background: currentUser.activityColor || 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
+              border: `2px solid ${currentUser.activityColor || 'var(--border-hover)'}`
+            }}
           >
-            {staffList.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <div class="staff-avatar" title={`Logged in as ${activeStaff}`}>
-            {activeStaff.substring(0, 2).toUpperCase()}
+            {currentUser.fullName.substring(0, 2).toUpperCase()}
           </div>
+          <span style={{ fontSize: '13px', color: 'var(--text-white)', fontWeight: '600' }} className="mobile-hidden">
+            {currentUser.fullName.split(' ')[currentUser.fullName.split(' ').length - 1]}
+          </span>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>▼</span>
+
+          {showProfileDropdown && (
+            <div 
+              style={{
+                position: 'absolute',
+                top: '42px',
+                right: '0',
+                background: '#111827',
+                border: '1px solid rgba(212, 166, 79, 0.3)',
+                borderRadius: '12px',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                padding: '12px',
+                width: '190px',
+                zIndex: 9999,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Profile Representative
+              </div>
+              <div style={{ fontWeight: '800', fontSize: '13px', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {currentUser.fullName}
+              </div>
+              <div style={{ fontSize: '10px', color: currentUser.activityColor, fontWeight: '700' }}>
+                Role: {currentUser.role || 'Staff'}
+              </div>
+              
+              <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '4px 0' }} />
+              
+              <button 
+                onClick={() => {
+                  logoutUser();
+                  setShowProfileDropdown(false);
+                }}
+                className="btn btn-danger btn-sm"
+                style={{ width: '100%', padding: '6px', justifyContent: 'center', fontWeight: '700' }}
+              >
+                Logout 📴
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -126,6 +179,10 @@ function AppContent() {
         
         {currentView === 'reminders' && (
           <Reminders onViewCustomer={handleViewCustomer} />
+        )}
+        
+        {currentView === 'activities' && (
+          <AdminActivityMonitor />
         )}
         
         {currentView === 'customer-detail' && selectedCustomerId && (
@@ -152,7 +209,7 @@ function AppContent() {
             <rect x="14" y="14" width="7" height="7"></rect>
             <rect x="3" y="14" width="7" height="7"></rect>
           </svg>
-          Dashboard
+          Home
         </button>
 
         {/* Pipeline Tab */}
@@ -164,14 +221,14 @@ function AppContent() {
           }}
         >
           <svg viewBox="0 0 24 24">
-            <line x1="12" y1="20" x2="12" y2="10"></line>
-            <line x1="18" y1="20" x2="18" y2="4"></line>
-            <line x1="6" y1="20" x2="6" y2="16"></line>
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
           </svg>
           Pipeline
         </button>
 
-        {/* Reminders / Activity Tab */}
+        {/* Reminders Tab */}
         <button
           class={`nav-item ${currentView === 'reminders' ? 'active' : ''}`}
           onClick={() => {
@@ -184,6 +241,21 @@ function AppContent() {
             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
           </svg>
           Reminders
+        </button>
+
+        {/* Audit Monitor Tab */}
+        <button
+          class={`nav-item ${currentView === 'activities' ? 'active' : ''}`}
+          onClick={() => {
+            setSelectedCustomerId(null);
+            setCurrentView('activities');
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          Audit Monitor
         </button>
       </nav>
 

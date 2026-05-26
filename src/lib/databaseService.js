@@ -234,6 +234,60 @@ const mapBillFromSupabase = (b) => ({
   createdAt: b.created_at
 });
 
+const mapCRMUserToSupabase = (u) => ({
+  id: ensureUUID(u.id),
+  user_code: u.userCode || '',
+  full_name: u.fullName || '',
+  role: u.role || 'Staff',
+  temp_password: u.tempPassword || 'suresh',
+  activity_color: u.activityColor || '#D4A64F',
+  created_at: parseSafeDate(u.createdAt, new Date().toISOString()),
+  updated_at: parseSafeDate(u.updatedAt, new Date().toISOString()),
+  last_login: u.lastLogin ? parseSafeDate(u.lastLogin) : null,
+  is_active: u.isActive !== undefined ? u.isActive : true
+});
+
+const mapCRMUserFromSupabase = (u) => ({
+  id: u.id,
+  userCode: u.user_code,
+  fullName: u.full_name,
+  role: u.role,
+  tempPassword: u.temp_password,
+  activityColor: u.activity_color,
+  createdAt: u.created_at,
+  updatedAt: u.updated_at,
+  lastLogin: u.last_login,
+  isActive: u.is_active
+});
+
+const mapCRMUserActivityToSupabase = (a) => ({
+  id: ensureUUID(a.id),
+  user_id: ensureUUID(a.userId),
+  customer_id: a.customerId || null,
+  activity_type: a.activityType || '',
+  activity_description: a.activityDescription || '',
+  module_name: a.moduleName || null,
+  old_value: a.oldValue || null,
+  new_value: a.newValue || null,
+  created_at: parseSafeDate(a.createdAt, new Date().toISOString()),
+  ip_address: a.ipAddress || null,
+  device_info: a.deviceInfo || null
+});
+
+const mapCRMUserActivityFromSupabase = (a) => ({
+  id: a.id,
+  userId: a.user_id,
+  customerId: a.customer_id,
+  activityType: a.activity_type,
+  activityDescription: a.activity_description,
+  moduleName: a.module_name,
+  oldValue: a.old_value,
+  newValue: a.new_value,
+  createdAt: a.created_at,
+  ipAddress: a.ip_address,
+  deviceInfo: a.device_info
+});
+
 const defaultStages = [
   { stageName: 'New Lead', stageColor: '#3B82F6', stageOrder: 1 },
   { stageName: 'Quotation Sent', stageColor: '#F59E0B', stageOrder: 2 },
@@ -731,6 +785,114 @@ export const databaseService = {
       return data && data.length > 0 ? mapBillFromSupabase(data[0]) : null;
     } catch (err) {
       console.error('[Database Service] createBill exception:', err.message || err);
+      throw err;
+    }
+  },
+
+  // --- REMINDERS DELETE ---
+  async deleteReminder(reminderId) {
+    try {
+      console.log('[Database Service] Deleting reminder:', reminderId);
+      const { error } = await supabase
+        .from('reminders')
+        .delete()
+        .eq('id', reminderId);
+      if (error) {
+        console.error('[Database Service] deleteReminder error:', error);
+        throw error;
+      }
+      return true;
+    } catch (err) {
+      console.error('[Database Service] deleteReminder exception:', err.message || err);
+      throw err;
+    }
+  },
+
+  // --- CRM USER ACCOUNT & AUDIT TIMELINE ---
+  async fetchCRMUsers() {
+    try {
+      console.log('[Database Service] Fetching CRM staff users...');
+      const { data, error } = await supabase
+        .from('crm_users')
+        .select('*')
+        .order('full_name', { ascending: true });
+      if (error) {
+        console.error('[Database Service] fetchCRMUsers error:', error);
+        throw error;
+      }
+      return (data || []).map(mapCRMUserFromSupabase);
+    } catch (err) {
+      console.error('[Database Service] fetchCRMUsers exception:', err.message || err);
+      return [];
+    }
+  },
+
+  async createCRMUser(user) {
+    try {
+      console.log('[Database Service] Registering new CRM user profile:', user?.fullName);
+      const dbObj = mapCRMUserToSupabase(user);
+      const { data, error } = await supabase
+        .from('crm_users')
+        .insert([dbObj])
+        .select();
+      if (error) {
+        console.error('[Database Service] createCRMUser error:', error);
+        throw error;
+      }
+      return data && data.length > 0 ? mapCRMUserFromSupabase(data[0]) : null;
+    } catch (err) {
+      console.error('[Database Service] createCRMUser exception:', err.message || err);
+      throw err;
+    }
+  },
+
+  async updateCRMUserLastLogin(userId) {
+    try {
+      const { error } = await supabase
+        .from('crm_users')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', userId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Database Service] updateCRMUserLastLogin error:', err.message || err);
+      return false;
+    }
+  },
+
+  async fetchCRMUserActivities() {
+    try {
+      console.log('[Database Service] Fetching CRM audit activities log...');
+      const { data, error } = await supabase
+        .from('crm_user_activities')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('[Database Service] fetchCRMUserActivities error:', error);
+        throw error;
+      }
+      return (data || []).map(mapCRMUserActivityFromSupabase);
+    } catch (err) {
+      console.error('[Database Service] fetchCRMUserActivities exception:', err.message || err);
+      return [];
+    }
+  },
+
+  async logCRMActivity(activity) {
+    try {
+      console.log('[Database Service] Saving audit activity entry:', activity?.activityType);
+      const dbObj = mapCRMUserActivityToSupabase(activity);
+      const { data, error } = await supabase
+        .from('crm_user_activities')
+        .insert([dbObj])
+        .select();
+      if (error) {
+        console.error('[Database Service] logCRMActivity error:', error);
+        throw error;
+      }
+      return data && data.length > 0 ? mapCRMUserActivityFromSupabase(data[0]) : null;
+    } catch (err) {
+      console.error('[Database Service] logCRMActivity exception:', err.message || err);
       throw err;
     }
   }

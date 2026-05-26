@@ -20,24 +20,64 @@ export const CRMDatabaseProvider = ({ children }) => {
   const [reminders, setReminders] = useState([]);
   const [stages, setStages] = useState([]);
   const [bills, setBills] = useState([]);
+
+  // CRM Users & Activities audit logs state
+  const [crmUsers, setCRMUsers] = useState([]);
+  const [crmUserActivities, setCRMUserActivities] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [activeStaff, setActiveStaff] = useState('Suresh'); // Default selected staff member
 
   // List of available staff members for dropdown selectors
   const staffList = ['Suresh', 'Suresh babu', 'Ravi', 'Arun', 'Admin'];
 
+  const getDeviceMetadata = () => {
+    return {
+      ipAddress: '127.0.0.1',
+      deviceInfo: navigator.userAgent || 'Chrome/Windows/PWA'
+    };
+  };
+
+  const logAuditActivity = async (type, description, customerId = null, oldValue = null, newValue = null) => {
+    if (!currentUser) return;
+    try {
+      const meta = getDeviceMetadata();
+      const newAct = {
+        id: crypto.randomUUID(),
+        userId: currentUser.id,
+        customerId: customerId,
+        activityType: type,
+        activityDescription: description,
+        moduleName: 'CRM System',
+        oldValue: oldValue ? String(oldValue) : null,
+        newValue: newValue ? String(newValue) : null,
+        ipAddress: meta.ipAddress,
+        deviceInfo: meta.deviceInfo,
+        createdAt: new Date().toISOString()
+      };
+      await databaseService.logCRMActivity(newAct);
+      const freshUserActs = await databaseService.fetchCRMUserActivities();
+      setCRMUserActivities(freshUserActs);
+    } catch (err) {
+      console.error('[CRM Context] Failed to log audit activity:', err);
+    }
+  };
+
   const refreshDatabase = async () => {
     setIsLoading(true);
     try {
       console.log('[CRM Context] Initializing Supabase database synchronization...');
-      const [custs, acts, nts, pmts, rems, stgs, bls] = await Promise.all([
+      const [custs, acts, nts, pmts, rems, stgs, bls, users, userActs] = await Promise.all([
         databaseService.getCustomers(),
         databaseService.fetchActivities(),
         databaseService.fetchNotes(),
         databaseService.fetchPayments(),
         databaseService.fetchReminders(),
         databaseService.fetchStages(),
-        databaseService.fetchBills()
+        databaseService.fetchBills(),
+        databaseService.fetchCRMUsers(),
+        databaseService.fetchCRMUserActivities()
       ]);
       
       // --- AUTO-BACKFILL LEGACY CUSTOMERS ---
@@ -102,6 +142,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       setReminders(rems || []);
       setStages(stgs || []);
       setBills(bls || []);
+      setCRMUsers(users || []);
+      setCRMUserActivities(userActs || []);
       console.log('[CRM Context] Supabase database synchronization complete.');
     } catch (err) {
       console.error('[CRM Context] Supabase initial database sync failed:', err?.message || err);
@@ -110,8 +152,18 @@ export const CRMDatabaseProvider = ({ children }) => {
     }
   };
 
-  // Load database asynchronously on mount
+  // Load database asynchronously on mount and restore session
   useEffect(() => {
+    const savedUser = localStorage.getItem('svp_crm_active_user');
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        setCurrentUser(parsed);
+        setActiveStaff(parsed.fullName);
+      } catch (e) {
+        console.error('[CRM Context] Failed to restore session:', e);
+      }
+    }
     refreshDatabase();
   }, []);
 
@@ -188,6 +240,12 @@ export const CRMDatabaseProvider = ({ children }) => {
       const created = await databaseService.createCustomer(newCustomer);
       const activeCustomerId = created?.id || newId;
       console.log(`[CRM Context] Customer inserted successfully. Active ID: ${activeCustomerId}`);
+      
+      // Track audit activity
+      await logAuditActivity('Customer Created', `Customer file created for ${newCustomer.customerName} (${formattedCustomerNumber}) with deal amount Rs. ${totalAmount}`, activeCustomerId);
+      if (items && items.length > 0) {
+        await logAuditActivity('Material Added', `Materials list initialized for ${newCustomer.customerName} (${items.length} products)`, activeCustomerId);
+      }
 
       // 2. Insert initial payment record if advance was paid (Decoupled)
       if (advancePaid > 0) {
@@ -317,6 +375,12 @@ export const CRMDatabaseProvider = ({ children }) => {
           timestamp: new Date().toISOString()
         };
         await databaseService.saveActivity(activity);
+        
+        // Track audit activities
+        await logAuditActivity('Customer Edited', `Updated details for customer ${updated.customerName}: ${changes.join(', ')}`, customerId);
+        if (updatedFields?.items) {
+          await logAuditActivity('Material Added', `Materials list updated for ${updated.customerName} (${updatedFields.items.length} products)`, customerId);
+        }
       }
 
       // Sync automatic reminder if followup date changes
@@ -362,6 +426,10 @@ export const CRMDatabaseProvider = ({ children }) => {
         timestamp: new Date().toISOString()
       };
       await databaseService.saveActivity(activity);
+      
+      // Track audit activities
+      await logAuditActivity('Stage Changed', `Moved stage of customer ${customer.customerName} from ${oldStage} to ${newStage}`, customerId, oldStage, newStage);
+      await logAuditActivity('Pipeline Movement', `Moved customer ${customer.customerName} into ${newStage} pipeline column`, customerId, oldStage, newStage);
 
       // Live refresh
       await refreshDatabase();
@@ -416,6 +484,9 @@ export const CRMDatabaseProvider = ({ children }) => {
         timestamp: new Date().toISOString()
       };
       await databaseService.saveActivity(activity);
+      
+      // Track audit activity
+      await logAuditActivity('Payment Updated', `Recorded payment installment of Rs. ${pAmount} via ${paymentMode} for customer ${customer.customerName}. New Balance: Rs. ${newPending}`, customerId, String(customer.advancePaid), String(newAdvance));
 
       // Live refresh
       await refreshDatabase();
@@ -495,6 +566,16 @@ export const CRMDatabaseProvider = ({ children }) => {
       };
       await databaseService.saveActivity(activity);
 
+      // Audit logs
+      const customer = customers.find(c => c.id === customerId);
+      await logAuditActivity(
+        'Reminder Added',
+        `Scheduled new follow-up reminder for ${customer?.customerName || 'client'}: ${reminderType} on ${reminderDate?.split('T')[0]}. Notes: ${notesText || 'None'}`,
+        customerId,
+        null,
+        reminderType
+      );
+
       // Live refresh
       await refreshDatabase();
     } catch (err) {
@@ -521,6 +602,16 @@ export const CRMDatabaseProvider = ({ children }) => {
         timestamp: new Date().toISOString()
       };
       await databaseService.saveActivity(activity);
+
+      // Audit logs
+      const customer = customers.find(c => c.id === reminder.customerId);
+      await logAuditActivity(
+        'Reminder Snoozed',
+        `Snoozed ${reminder.reminderType} for ${customer?.customerName || 'client'} from ${reminder.reminderDate?.split('T')[0]} to ${newDate?.split('T')[0]}`,
+        reminder.customerId,
+        reminder.reminderDate?.split('T')[0],
+        newDate?.split('T')[0]
+      );
 
       // Live refresh
       await refreshDatabase();
@@ -549,10 +640,91 @@ export const CRMDatabaseProvider = ({ children }) => {
       };
       await databaseService.saveActivity(activity);
 
+      // Audit logs
+      const customer = customers.find(c => c.id === reminder.customerId);
+      await logAuditActivity(
+        'Reminder Completed',
+        `Completed reminder "${reminder.reminderType} - ${reminder.notes || ''}" for ${customer?.customerName || 'client'}`,
+        reminder.customerId,
+        'Pending',
+        'Completed'
+      );
+
       // Live refresh
       await refreshDatabase();
     } catch (err) {
       console.error('[CRM Context] completeReminder Exception:', err?.message || err);
+    }
+  };
+
+  const deleteReminder = async (reminderId, staffName = activeStaff) => {
+    try {
+      console.log('[CRM Context] Deleting reminder permanently:', reminderId);
+      const reminder = reminders.find(r => r.id === reminderId);
+      if (!reminder) return;
+
+      await databaseService.deleteReminder(reminderId);
+
+      const activity = {
+        customerId: reminder.customerId,
+        actionType: 'reminder_deleted',
+        oldValue: reminder.notes || 'Reminder',
+        newValue: 'Deleted Permanently',
+        updatedBy: staffName,
+        timestamp: new Date().toISOString()
+      };
+      await databaseService.saveActivity(activity);
+
+      // Audit logs
+      const customer = customers.find(c => c.id === reminder.customerId);
+      await logAuditActivity(
+        'Reminder Deleted',
+        `Deleted follow-up reminder "${reminder.reminderType} - ${reminder.notes || ''}" permanently for ${customer?.customerName || 'client'}`,
+        reminder.customerId,
+        reminder.notes,
+        'Deleted'
+      );
+
+      // Live refresh
+      await refreshDatabase();
+    } catch (err) {
+      console.error('[CRM Context] deleteReminder Exception:', err?.message || err);
+    }
+  };
+
+  const restoreReminder = async (reminderId, staffName = activeStaff) => {
+    try {
+      console.log('[CRM Context] Restoring reminder back to pending:', reminderId);
+      const reminder = reminders.find(r => r.id === reminderId);
+      if (!reminder) return;
+
+      const restoredRem = { ...reminder, status: 'Pending' };
+      await databaseService.saveReminder(restoredRem);
+
+      const activity = {
+        customerId: reminder.customerId,
+        actionType: 'reminder_restored',
+        oldValue: 'Completed',
+        newValue: `Restored: ${reminder.reminderType}`,
+        updatedBy: staffName,
+        timestamp: new Date().toISOString()
+      };
+      await databaseService.saveActivity(activity);
+
+      // Audit logs
+      const customer = customers.find(c => c.id === reminder.customerId);
+      await logAuditActivity(
+        'Reminder Restored',
+        `Restored reminder "${reminder.reminderType} - ${reminder.notes || ''}" to active state for ${customer?.customerName || 'client'}`,
+        reminder.customerId,
+        'Completed',
+        'Pending'
+      );
+
+      // Live refresh
+      await refreshDatabase();
+    } catch (err) {
+      console.error('[CRM Context] restoreReminder Exception:', err?.message || err);
     }
   };
 
@@ -576,10 +748,166 @@ export const CRMDatabaseProvider = ({ children }) => {
       };
       await databaseService.saveActivity(activity);
 
+      // Audit logs
+      await logAuditActivity(
+        'Customer Deleted',
+        `Soft-deleted customer file for ${customer.customerName} (${customer.customerNo})`,
+        customerId,
+        'Active',
+        'Deleted'
+      );
+
       // Live refresh
       await refreshDatabase();
     } catch (err) {
       console.error('[CRM Context] deleteCustomer Exception:', err?.message || err);
+    }
+  };
+
+  // --- CRM INTERNAL LOGIN PERSISTENCE HANDLERS ---
+  const loginUser = async (userCode, password) => {
+    try {
+      setIsLoading(true);
+      const freshUsers = await databaseService.fetchCRMUsers();
+      setCRMUsers(freshUsers);
+
+      const matched = freshUsers.find(u => u.userCode === userCode.toLowerCase());
+      if (!matched) {
+        throw new Error('User profile not found in database.');
+      }
+
+      if (password !== 'suresh') {
+        throw new Error('Incorrect password entered.');
+      }
+
+      await databaseService.updateCRMUserLastLogin(matched.id);
+      localStorage.setItem('svp_crm_active_user', JSON.stringify(matched));
+      setCurrentUser(matched);
+      setActiveStaff(matched.fullName);
+
+      // Log activity
+      const meta = getDeviceMetadata();
+      const newAct = {
+        id: crypto.randomUUID(),
+        userId: matched.id,
+        customerId: null,
+        activityType: 'Login',
+        activityDescription: `Staff ${matched.fullName} logged into CRM successfully.`,
+        moduleName: 'Authentication',
+        oldValue: null,
+        newValue: 'Session Active',
+        ipAddress: meta.ipAddress,
+        deviceInfo: meta.deviceInfo,
+        createdAt: new Date().toISOString()
+      };
+      await databaseService.logCRMActivity(newAct);
+
+      await refreshDatabase();
+      return matched;
+    } catch (err) {
+      console.error('[CRM Context] loginUser Exception:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logoutUser = async () => {
+    if (!currentUser) return;
+    try {
+      const oldUser = currentUser;
+
+      // Log activity
+      const meta = getDeviceMetadata();
+      const newAct = {
+        id: crypto.randomUUID(),
+        userId: oldUser.id,
+        customerId: null,
+        activityType: 'Logout',
+        activityDescription: `Staff ${oldUser.fullName} logged out of CRM.`,
+        moduleName: 'Authentication',
+        oldValue: 'Session Active',
+        newValue: 'Session Terminated',
+        ipAddress: meta.ipAddress,
+        deviceInfo: meta.deviceInfo,
+        createdAt: new Date().toISOString()
+      };
+      await databaseService.logCRMActivity(newAct);
+
+      localStorage.removeItem('svp_crm_active_user');
+      setCurrentUser(null);
+      await refreshDatabase();
+    } catch (err) {
+      console.error('[CRM Context] logoutUser Exception:', err);
+    }
+  };
+
+  const registerOthersUser = async (fullName) => {
+    try {
+      setIsLoading(true);
+      const colors = ['#EC4899', '#F43F5E', '#D946EF', '#8B5CF6', '#06B6D4', '#14B8A6', '#0EA5E9', '#E11D48', '#D97706', '#22C55E'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      const code = fullName.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+
+      const newUser = {
+        id: crypto.randomUUID(),
+        userCode: code || 'other_' + Date.now(),
+        fullName: fullName.trim(),
+        role: 'Staff',
+        tempPassword: 'suresh',
+        activityColor: randomColor,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true
+      };
+
+      const created = await databaseService.createCRMUser(newUser);
+      if (created) {
+        await databaseService.updateCRMUserLastLogin(created.id);
+        localStorage.setItem('svp_crm_active_user', JSON.stringify(created));
+        setCurrentUser(created);
+        setActiveStaff(created.fullName);
+
+        // Audit Logs
+        const meta = getDeviceMetadata();
+        const regAct = {
+          id: crypto.randomUUID(),
+          userId: created.id,
+          customerId: null,
+          activityType: 'Register User',
+          activityDescription: `New user profile registered permanently: ${created.fullName}`,
+          moduleName: 'User Management',
+          oldValue: null,
+          newValue: created.userCode,
+          ipAddress: meta.ipAddress,
+          deviceInfo: meta.deviceInfo,
+          createdAt: new Date().toISOString()
+        };
+        await databaseService.logCRMActivity(regAct);
+
+        const logAct = {
+          id: crypto.randomUUID(),
+          userId: created.id,
+          customerId: null,
+          activityType: 'Login',
+          activityDescription: `Staff ${created.fullName} logged into CRM successfully.`,
+          moduleName: 'Authentication',
+          oldValue: null,
+          newValue: 'Session Active',
+          ipAddress: meta.ipAddress,
+          deviceInfo: meta.deviceInfo,
+          createdAt: new Date().toISOString()
+        };
+        await databaseService.logCRMActivity(logAct);
+
+        await refreshDatabase();
+        return created;
+      }
+    } catch (err) {
+      console.error('[CRM Context] registerOthersUser Exception:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -724,6 +1052,11 @@ export const CRMDatabaseProvider = ({ children }) => {
         timestamp: new Date().toISOString()
       };
       await databaseService.saveActivity(activity);
+      
+      // Track audit activity
+      const cust = customers.find(c => c.id === customerId);
+      await logAuditActivity('PDF Exported', `Generated and exported PDF document: "${pdfType}"${cust ? ' for ' + cust.customerName : ''}`, customerId);
+      
       await refreshDatabase();
     } catch (err) {
       console.error('[CRM Context] logPdfGeneration Exception:', err?.message || err);
@@ -746,6 +1079,10 @@ export const CRMDatabaseProvider = ({ children }) => {
           timestamp: new Date().toISOString()
         };
         await databaseService.saveActivity(activity);
+        
+        // Track audit activity
+        const cust = customers.find(c => c.id === billData.customerId);
+        await logAuditActivity('Bill Generated', `Generated Invoice Bill ${billData.billNo} for Rs. ${billData.finalAmount}${cust ? ' for customer ' + cust.customerName : ''}`, billData.customerId, null, billData.billNo);
       } catch (actErr) {
         console.error('[CRM Context] Decoupled bill activity logging failed:', actErr);
       }
@@ -755,6 +1092,24 @@ export const CRMDatabaseProvider = ({ children }) => {
     } catch (err) {
       console.error('[CRM Context] createBillTransaction Exception:', err);
       throw err;
+    }
+  };
+
+  const logWhatsAppOpened = async (customerId) => {
+    try {
+      const cust = customers.find(c => c.id === customerId);
+      await logAuditActivity('WhatsApp Opened', `Initiated WhatsApp communication link for ${cust ? cust.customerName : 'client'}`, customerId);
+    } catch (e) {
+      console.error('[CRM Context] logWhatsAppOpened Error:', e);
+    }
+  };
+
+  const logSearchAction = async (searchTerm) => {
+    if (!searchTerm || !searchTerm.trim()) return;
+    try {
+      await logAuditActivity('Search Actions', `Executed search query in CRM dashboard: "${searchTerm}"`);
+    } catch (e) {
+      console.error('[CRM Context] logSearchAction Error:', e);
     }
   };
 
@@ -772,6 +1127,13 @@ export const CRMDatabaseProvider = ({ children }) => {
       isLoading,
       activeStaff,
       setActiveStaff,
+      crmUsers,
+      crmUserActivities,
+      currentUser,
+      loginUser,
+      logoutUser,
+      registerOthersUser,
+      logAuditActivity,
       addCustomer,
       editCustomer,
       updateCustomerStage,
@@ -781,6 +1143,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       createReminder,
       snoozeReminder,
       completeReminder,
+      deleteReminder,
+      restoreReminder,
       deleteCustomer,
       addStage,
       renameStage,
@@ -791,6 +1155,8 @@ export const CRMDatabaseProvider = ({ children }) => {
       deleteCustomerImage,
       logPdfGeneration,
       createBillTransaction,
+      logWhatsAppOpened,
+      logSearchAction,
       refreshDatabase
     }}>
       {children}
