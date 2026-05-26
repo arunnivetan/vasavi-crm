@@ -16,6 +16,7 @@ export default function CustomerDetail({ customerId, onBack }) {
     payments,
     reminders,
     stages,
+    bills,
     staffList,
     activeStaff,
     editCustomer,
@@ -30,7 +31,8 @@ export default function CustomerDetail({ customerId, onBack }) {
     uploadCustomerImage,
     getCustomerImages,
     deleteCustomerImage,
-    logPdfGeneration
+    logPdfGeneration,
+    createBillTransaction
   } = useCRMDatabase();
 
   const customer = (customers || []).find(c => c.id === customerId);
@@ -335,6 +337,53 @@ export default function CustomerDetail({ customerId, onBack }) {
     logPdfGeneration(customerId, 'Sales Tax Invoice');
   };
 
+  const handleExportBillFlow = async () => {
+    try {
+      // 1. Generate unique bill number
+      const currentYear = new Date().getFullYear();
+      let maxBillNumber = 0;
+      
+      (bills || []).forEach(b => {
+        if (b.billNo && b.billNo.startsWith(`SVP-BILL-${currentYear}-`)) {
+          const parts = b.billNo.split('-');
+          const numStr = parts[parts.length - 1];
+          const num = parseInt(numStr, 10);
+          if (!isNaN(num) && num > maxBillNumber) maxBillNumber = num;
+        }
+      });
+      const nextBillNumber = maxBillNumber + 1;
+      const formattedBillNo = `SVP-BILL-${currentYear}-${nextBillNumber.toString().padStart(4, '0')}`;
+      
+      // 2. Save bill record in database
+      const billRecord = {
+        id: crypto.randomUUID(),
+        customerId: customer.id,
+        customerNo: customer.customerNo || 'SVP-CUS-2026-0000',
+        billNo: formattedBillNo,
+        billDate: new Date().toLocaleDateString('en-IN'),
+        finalAmount: parseFloat(customer.amount || 0),
+        gstPercent: parseFloat(customer.taxPercent || 0),
+        advancePaid: parseFloat(customer.advancePaid || 0),
+        pendingBalance: parseFloat(customer.pendingAmount || 0),
+        generatedBy: activeStaff || 'System'
+      };
+      
+      await createBillTransaction(billRecord);
+      
+      // 3. Attach bill to customer
+      await editCustomer(customer.id, {
+        latestBillNo: formattedBillNo
+      });
+      
+      // 4. Open PDF preview
+      setIsPDFPreviewOpen(true);
+      
+    } catch (err) {
+      console.error('[Export Bill Flow] Error:', err);
+      alert('Failed to export bill: ' + (err?.message || err));
+    }
+  };
+
   const handleExportQuotation = (action = 'download') => {
     generateQuotationPDF(customer, action);
     logPdfGeneration(customerId, 'Commercial Quotation');
@@ -426,8 +475,11 @@ export default function CustomerDetail({ customerId, onBack }) {
           <span className={`badge badge-priority-${customer.priority.toLowerCase()}`} style={{ fontSize: '11px', padding: '4px 8px', fontWeight: '600' }}>
             {customer.priority}
           </span>
+          <span className="badge" style={{ backgroundColor: 'rgba(212, 166, 79, 0.1)', color: 'var(--accent)', border: '1px solid rgba(212, 166, 79, 0.25)', fontSize: '11px', padding: '4px 8px', fontWeight: '600' }}>
+            {customer.customerNo || 'SVP-CUS-2026-0000'}
+          </span>
           <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', padding: '4px 8px', fontWeight: '600' }}>
-            {billNumber}
+            {customer.latestBillNo || 'NO BILL ISSUED'}
           </span>
         </div>
 
@@ -683,7 +735,7 @@ export default function CustomerDetail({ customerId, onBack }) {
               <button
                 className="btn btn-secondary"
                 style={{ width: '100%', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600' }}
-                onClick={() => handleExportQuotation('download')}
+                onClick={handleExportBillFlow}
               >
                 💵 Export Bill
               </button>
@@ -1763,7 +1815,7 @@ export default function CustomerDetail({ customerId, onBack }) {
                 <button
                   className="btn btn-primary"
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '13px', border: 'none', fontWeight: '700' }}
-                  onClick={() => { handleExportProfile('download'); setIsPDFPreviewOpen(false); }}
+                  onClick={() => { handleExportInvoice('download'); setIsPDFPreviewOpen(false); }}
                 >
                   Download PDF
                 </button>
@@ -1790,14 +1842,15 @@ export default function CustomerDetail({ customerId, onBack }) {
                   
                   {/* RIGHT: METADATA */}
                   <div style={{ flex: '1', textAlign: 'right' }}>
-                    <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>BILL NO: <span style={{ color: '#666', fontWeight: 'normal' }}>{billNumber}</span></p>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>BILL NO: <span style={{ color: '#666', fontWeight: 'normal' }}>{customer.latestBillNo || 'NO BILL ISSUED'}</span></p>
                     <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>BILL DATE: <span style={{ color: '#666', fontWeight: 'normal' }}>{new Date().toLocaleDateString('en-IN')}</span></p>
                   </div>
                 </div>
                 
                 {/* CUSTOMER DETAILS ROW */}
                 <div style={{ marginBottom: '20px' }}>
-                  <p style={{ margin: '0 0 5px 0', color: '#6c757d', fontSize: '12px', fontWeight: 'bold' }}>TO:</p>
+                  <p style={{ margin: '0 0 5px 0', color: '#6c757d', fontSize: '12px', fontWeight: 'bold' }}>Customer No: <span style={{ color: '#212b36', fontWeight: 'normal' }}>{customer.customerNo || 'SVP-CUS-2026-0000'}</span></p>
+                  <p style={{ margin: '10px 0 5px 0', color: '#6c757d', fontSize: '12px', fontWeight: 'bold' }}>TO:</p>
                   <p style={{ margin: 0, fontWeight: 'bold', fontSize: '16px', color: '#0b0f19' }}>{customer.customerName}</p>
                   <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#212b36' }}>{customer.address || 'Address not specified'}</p>
                   <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#212b36' }}>Ph: {customer.phone || 'N/A'}</p>

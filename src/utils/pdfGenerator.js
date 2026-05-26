@@ -296,6 +296,7 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(...COLORS.TEXT_MUTED);
+  doc.text(`Customer No: ${customer.customerNo || 'SVP-CUS-2026-0000'}`, 30, 142);
   doc.text('TO:', 30, 154);
 
   doc.setFontSize(11);
@@ -584,9 +585,8 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
 export const generateInvoicePDF = (customer, paymentsList, action = 'download') => {
   const doc = new jsPDF({ format: 'a4', unit: 'pt' });
 
-  const billTag = (customer.tags || []).find(t => t.startsWith('BILL:'));
-  const invoiceId = billTag ? billTag.split(':')[1] : `INV-${Date.now().toString().substring(6)}`;
-  const profileId = `CL-${customer.id ? customer.id.split('_')[1] : 'FILE'}`;
+  const invoiceId = customer.latestBillNo || `SVP-BILL-${new Date().getFullYear()}-0000`;
+  const profileId = customer.customerNo || 'SVP-CUS-2026-0000';
 
   // Document Number & Date below gold line
   doc.setFont('helvetica', 'bold');
@@ -598,6 +598,7 @@ export const generateInvoicePDF = (customer, paymentsList, action = 'download') 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(...COLORS.TEXT_MUTED);
+  doc.text(`Customer No: ${customer.customerNo || 'SVP-CUS-2026-0000'}`, 30, 110);
   doc.text('TO:', 30, 122);
 
   doc.setFontSize(11);
@@ -818,6 +819,7 @@ export const generateQuotationPDF = (customer, action = 'download') => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(...COLORS.TEXT_MUTED);
+  doc.text(`Customer No: ${customer.customerNo || 'SVP-CUS-2026-0000'}`, 30, 108);
   doc.text('TO:', 30, 120);
 
   doc.setFontSize(11);

@@ -56,7 +56,9 @@ const mapToSupabase = (c) => {
     priority: c.priority || 'Medium',
     tags: c.tags || [],
     is_deleted: c.isDeleted || false,
-    created_at: parseSafeDate(c.createdAt, new Date().toISOString())
+    created_at: parseSafeDate(c.createdAt, new Date().toISOString()),
+    customer_no: c.customerNo || null,
+    latest_bill_no: c.latestBillNo || null
   };
 };
 
@@ -89,7 +91,9 @@ const mapFromSupabase = (s) => {
     priority: s.priority || 'Medium',
     tags: s.tags || [],
     isDeleted: s.is_deleted || false,
-    createdAt: s.created_at || new Date().toISOString()
+    createdAt: s.created_at || new Date().toISOString(),
+    customerNo: s.customer_no || null,
+    latestBillNo: s.latest_bill_no || null
   };
 };
 
@@ -200,6 +204,34 @@ const mapFileFromSupabase = (f) => ({
   fileUrl: f.file_url,
   uploadedBy: f.uploaded_by,
   uploadedAt: f.created_at
+});
+
+const mapBillToSupabase = (b) => ({
+  id: ensureUUID(b.id),
+  customer_id: ensureUUID(b.customerId),
+  customer_no: b.customerNo || '',
+  bill_no: b.billNo || '',
+  bill_date: b.billDate || new Date().toISOString().split('T')[0],
+  final_amount: parseFloat(b.finalAmount || 0),
+  gst_percent: parseFloat(b.gstPercent || 0),
+  advance_paid: parseFloat(b.advancePaid || 0),
+  pending_balance: parseFloat(b.pendingBalance || 0),
+  generated_by: b.generatedBy || 'System',
+  created_at: new Date().toISOString()
+});
+
+const mapBillFromSupabase = (b) => ({
+  id: b.id,
+  customerId: b.customer_id,
+  customerNo: b.customer_no,
+  billNo: b.bill_no,
+  billDate: b.bill_date,
+  finalAmount: parseFloat(b.final_amount || 0),
+  gstPercent: parseFloat(b.gst_percent || 0),
+  advancePaid: parseFloat(b.advance_paid || 0),
+  pendingBalance: parseFloat(b.pending_balance || 0),
+  generatedBy: b.generated_by,
+  createdAt: b.created_at
 });
 
 const defaultStages = [
@@ -659,6 +691,46 @@ export const databaseService = {
       return data && data.length > 0 ? data[0] : null;
     } catch (err) {
       console.error('[Database Service] saveInvoiceRecord failed:', err.message || err);
+      throw err;
+    }
+  },
+
+  // --- BILLS SYSTEM ---
+  async fetchBills() {
+    try {
+      console.log('[Database Service] Fetching all bills...');
+      const { data, error } = await supabase
+        .from('bills')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('[Database Service] fetchBills error:', error);
+        throw error;
+      }
+      return (data || []).map(mapBillFromSupabase);
+    } catch (err) {
+      console.error('[Database Service] fetchBills exception:', err.message || err);
+      return [];
+    }
+  },
+
+  async createBill(bill) {
+    try {
+      console.log('[Database Service] Creating bill record in Supabase:', bill?.billNo);
+      const dbObj = mapBillToSupabase(bill);
+      const { data, error } = await supabase
+        .from('bills')
+        .insert([dbObj])
+        .select();
+      
+      if (error) {
+        console.error('[Database Service] createBill error:', error);
+        throw error;
+      }
+      return data && data.length > 0 ? mapBillFromSupabase(data[0]) : null;
+    } catch (err) {
+      console.error('[Database Service] createBill exception:', err.message || err);
       throw err;
     }
   }

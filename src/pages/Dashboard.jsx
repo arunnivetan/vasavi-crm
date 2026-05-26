@@ -210,15 +210,19 @@ export default function Dashboard({ onViewCustomer }) {
     const phone = c.phone || '';
     const requirement = c.requirement || '';
     const address = c.address || '';
+    const customerNo = c.customerNo || '';
+    const latestBillNo = c.latestBillNo || '';
     const billTag = (c.tags || []).find(t => t.startsWith('BILL:')) || '';
-    const billNumber = billTag ? billTag.split(':')[1] : '';
+    const legacyBillNo = billTag ? billTag.split(':')[1] : '';
 
     const matchesSearch =
       name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       phone.includes(searchTerm) ||
       requirement.toLowerCase().includes(searchTerm.toLowerCase()) ||
       address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      billNumber.toLowerCase().includes(searchTerm.toLowerCase());
+      customerNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      latestBillNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      legacyBillNo.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStage = selectedStage === 'All' || c.stage === selectedStage;
     const matchesStaff = selectedStaff === 'All' || c.assignedStaff === selectedStage || c.assignedStaff === selectedStaff; // Backwards compatibility stage match
@@ -259,20 +263,6 @@ export default function Dashboard({ onViewCustomer }) {
     setIsSaving(true);
 
     try {
-      // Generate Unique Bill Number
-      const existingCustomers = customers || [];
-      let maxBillNumber = 0;
-      existingCustomers.forEach(c => {
-        const billTag = (c.tags || []).find(t => t.startsWith('BILL:SVP-'));
-        if (billTag) {
-          const numStr = billTag.split('-')[2];
-          const num = parseInt(numStr, 10);
-          if (!isNaN(num) && num > maxBillNumber) maxBillNumber = num;
-        }
-      });
-      const nextBillNumber = maxBillNumber + 1;
-      const formattedBillNumber = `SVP-${new Date().getFullYear()}-${nextBillNumber.toString().padStart(4, '0')}`;
-
       await addCustomer({
         customerName: newCustName,
         phone: newCustPhone,
@@ -291,7 +281,7 @@ export default function Dashboard({ onViewCustomer }) {
         advancePaid: advancePaidVal,
         paymentMode: newCustPayMode,
         followupDate: newCustFollowupDate,
-        tags: [`BILL:${formattedBillNumber}`]
+        tags: []
       });
 
       showToast('Customer file created successfully!', 'success');

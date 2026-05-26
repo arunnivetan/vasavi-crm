@@ -19,6 +19,7 @@ export const CRMDatabaseProvider = ({ children }) => {
   const [payments, setPayments] = useState([]);
   const [reminders, setReminders] = useState([]);
   const [stages, setStages] = useState([]);
+  const [bills, setBills] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeStaff, setActiveStaff] = useState('Suresh'); // Default selected staff member
 
@@ -29,21 +30,78 @@ export const CRMDatabaseProvider = ({ children }) => {
     setIsLoading(true);
     try {
       console.log('[CRM Context] Initializing Supabase database synchronization...');
-      const [custs, acts, nts, pmts, rems, stgs] = await Promise.all([
+      const [custs, acts, nts, pmts, rems, stgs, bls] = await Promise.all([
         databaseService.getCustomers(),
         databaseService.fetchActivities(),
         databaseService.fetchNotes(),
         databaseService.fetchPayments(),
         databaseService.fetchReminders(),
-        databaseService.fetchStages()
+        databaseService.fetchStages(),
+        databaseService.fetchBills()
       ]);
       
-      setCustomers(custs || []);
+      // --- AUTO-BACKFILL LEGACY CUSTOMERS ---
+      let hasUpdates = false;
+      const currentYear = new Date().getFullYear();
+      let maxCustNumber = 0;
+      
+      // Find the maximum customer number sequence already defined for the current year
+      (custs || []).forEach(c => {
+        if (c.customerNo && c.customerNo.startsWith(`SVP-CUS-${currentYear}-`)) {
+          const parts = c.customerNo.split('-');
+          const numStr = parts[parts.length - 1];
+          const num = parseInt(numStr, 10);
+          if (!isNaN(num) && num > maxCustNumber) {
+            maxCustNumber = num;
+          }
+        }
+      });
+
+      // Sort customers by creation date ascending so backfill sequences match creation order
+      const sortedCusts = [...(custs || [])].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+      for (let c of sortedCusts) {
+        let updatedFields = {};
+        let needsUpdate = false;
+
+        if (!c.customerNo) {
+          maxCustNumber += 1;
+          const formattedNo = `SVP-CUS-${currentYear}-${maxCustNumber.toString().padStart(4, '0')}`;
+          c.customerNo = formattedNo;
+          updatedFields.customerNo = formattedNo;
+          needsUpdate = true;
+        }
+
+        if (!c.latestBillNo) {
+          const billTag = (c.tags || []).find(t => t.startsWith('BILL:'));
+          if (billTag) {
+            const billNo = billTag.split(':')[1];
+            c.latestBillNo = billNo;
+            updatedFields.latestBillNo = billNo;
+            needsUpdate = true;
+          }
+        }
+
+        if (needsUpdate) {
+          console.log(`[CRM Context] Backfilling customer details for ${c.customerName}:`, updatedFields);
+          await databaseService.updateCustomer(c.id, updatedFields);
+          hasUpdates = true;
+        }
+      }
+
+      let finalCusts = custs || [];
+      if (hasUpdates) {
+        console.log('[CRM Context] Re-fetching customers after backfill updates...');
+        finalCusts = await databaseService.getCustomers();
+      }
+
+      setCustomers(finalCusts);
       setActivities(acts || []);
       setNotes(nts || []);
       setPayments(pmts || []);
       setReminders(rems || []);
       setStages(stgs || []);
+      setBills(bls || []);
       console.log('[CRM Context] Supabase database synchronization complete.');
     } catch (err) {
       console.error('[CRM Context] Supabase initial database sync failed:', err?.message || err);
@@ -80,6 +138,22 @@ export const CRMDatabaseProvider = ({ children }) => {
         paymentStatus = pendingAmount <= 0 ? 'Paid' : 'Partial';
       }
 
+      // Auto-generate Unique Customer Number (Format: SVP-CUS-YYYY-XXXX)
+      const currentYear = new Date().getFullYear();
+      let maxCustNumber = 0;
+      (customers || []).forEach(c => {
+        if (c.customerNo && c.customerNo.startsWith(`SVP-CUS-${currentYear}-`)) {
+          const parts = c.customerNo.split('-');
+          const numStr = parts[parts.length - 1];
+          const num = parseInt(numStr, 10);
+          if (!isNaN(num) && num > maxCustNumber) {
+            maxCustNumber = num;
+          }
+        }
+      });
+      const nextCustNumber = maxCustNumber + 1;
+      const formattedCustomerNumber = `SVP-CUS-${currentYear}-${nextCustNumber.toString().padStart(4, '0')}`;
+
       const newCustomer = {
         id: newId,
         customerName: customerData?.customerName || '',
@@ -105,7 +179,9 @@ export const CRMDatabaseProvider = ({ children }) => {
         priority: customerData?.priority || 'Medium',
         tags: customerData?.tags || [],
         createdAt: new Date().toISOString(),
-        isDeleted: false 
+        isDeleted: false,
+        customerNo: formattedCustomerNumber,
+        latestBillNo: null
       };
 
       // 1. Insert Customer Record into Supabase (Must complete first)
@@ -654,6 +730,34 @@ export const CRMDatabaseProvider = ({ children }) => {
     }
   };
 
+  const createBillTransaction = async (billData, staffName = activeStaff) => {
+    try {
+      console.log('[CRM Context] Creating bill transaction inside Supabase:', billData?.billNo);
+      const created = await databaseService.createBill(billData);
+      
+      // Log activity
+      try {
+        const activity = {
+          customerId: billData.customerId,
+          actionType: 'bill_generated',
+          oldValue: '',
+          newValue: `Generated Bill: ${billData.billNo}. Amount: Rs. ${billData.finalAmount}`,
+          updatedBy: staffName,
+          timestamp: new Date().toISOString()
+        };
+        await databaseService.saveActivity(activity);
+      } catch (actErr) {
+        console.error('[CRM Context] Decoupled bill activity logging failed:', actErr);
+      }
+
+      await refreshDatabase();
+      return created;
+    } catch (err) {
+      console.error('[CRM Context] createBillTransaction Exception:', err);
+      throw err;
+    }
+  };
+
   return (
     <CRMDatabaseContext.Provider value={{
       customers: (customers || []).filter(c => !c.isDeleted), 
@@ -663,6 +767,7 @@ export const CRMDatabaseProvider = ({ children }) => {
       payments,
       reminders,
       stages,
+      bills,
       staffList,
       isLoading,
       activeStaff,
@@ -685,6 +790,7 @@ export const CRMDatabaseProvider = ({ children }) => {
       getCustomerImages,
       deleteCustomerImage,
       logPdfGeneration,
+      createBillTransaction,
       refreshDatabase
     }}>
       {children}
