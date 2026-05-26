@@ -316,7 +316,7 @@ export default function Reminders({ onViewCustomer }) {
                         </p>
                         
                         <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', display: 'block', marginTop: '6px' }}>
-                          Client Code: <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>{cust.customerNo || 'N/A'}</span>
+                          Reference No: <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>{cust.svpReferenceNo || 'N/A'}</span>
                         </span>
                       </div>
                     </div>

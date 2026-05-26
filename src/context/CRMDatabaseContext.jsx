@@ -80,52 +80,22 @@ export const CRMDatabaseProvider = ({ children }) => {
         databaseService.fetchCRMUserActivities()
       ]);
       
-      // --- AUTO-BACKFILL LEGACY CUSTOMERS ---
+      // --- AUTO-BACKFILL SVP REFERENCE NUMBERS ---
       let hasUpdates = false;
-      const currentYear = new Date().getFullYear();
-      let maxCustNumber = 0;
-      
-      // Find the maximum customer number sequence already defined for the current year
-      (custs || []).forEach(c => {
-        if (c.customerNo && c.customerNo.startsWith(`SVP-CUS-${currentYear}-`)) {
-          const parts = c.customerNo.split('-');
-          const numStr = parts[parts.length - 1];
-          const num = parseInt(numStr, 10);
-          if (!isNaN(num) && num > maxCustNumber) {
-            maxCustNumber = num;
-          }
-        }
-      });
-
-      // Sort customers by creation date ascending so backfill sequences match creation order
       const sortedCusts = [...(custs || [])].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
       for (let c of sortedCusts) {
-        let updatedFields = {};
-        let needsUpdate = false;
-
-        if (!c.customerNo) {
-          maxCustNumber += 1;
-          const formattedNo = `SVP-CUS-${currentYear}-${maxCustNumber.toString().padStart(4, '0')}`;
-          c.customerNo = formattedNo;
-          updatedFields.customerNo = formattedNo;
-          needsUpdate = true;
-        }
-
-        if (!c.latestBillNo) {
-          const billTag = (c.tags || []).find(t => t.startsWith('BILL:'));
-          if (billTag) {
-            const billNo = billTag.split(':')[1];
-            c.latestBillNo = billNo;
-            updatedFields.latestBillNo = billNo;
-            needsUpdate = true;
+        if (!c.svpReferenceNo) {
+          try {
+            const { data, error } = await supabase.rpc('get_next_svp_reference_no');
+            if (!error && data) {
+              c.svpReferenceNo = data;
+              await databaseService.updateCustomer(c.id, { svpReferenceNo: data });
+              hasUpdates = true;
+            }
+          } catch (rpcErr) {
+            console.error('[CRM Context] Backfill RPC failed:', rpcErr);
           }
-        }
-
-        if (needsUpdate) {
-          console.log(`[CRM Context] Backfilling customer details for ${c.customerName}:`, updatedFields);
-          await databaseService.updateCustomer(c.id, updatedFields);
-          hasUpdates = true;
         }
       }
 
@@ -190,21 +160,29 @@ export const CRMDatabaseProvider = ({ children }) => {
         paymentStatus = pendingAmount <= 0 ? 'Paid' : 'Partial';
       }
 
-      // Auto-generate Unique Customer Number (Format: SVP-CUS-YYYY-XXXX)
-      const currentYear = new Date().getFullYear();
-      let maxCustNumber = 0;
-      (customers || []).forEach(c => {
-        if (c.customerNo && c.customerNo.startsWith(`SVP-CUS-${currentYear}-`)) {
-          const parts = c.customerNo.split('-');
-          const numStr = parts[parts.length - 1];
-          const num = parseInt(numStr, 10);
-          if (!isNaN(num) && num > maxCustNumber) {
-            maxCustNumber = num;
-          }
+      // Concurrency-safe Sequence Generation via PostgreSQL RPC
+      let formattedSVPReference = '';
+      try {
+        const { data, error } = await supabase.rpc('get_next_svp_reference_no');
+        if (!error && data) {
+          formattedSVPReference = data;
+        } else {
+          // Fallback if RPC fails
+          const year = new Date().getFullYear();
+          const maxNum = (customers || []).reduce((max, c) => {
+            if (c.svpReferenceNo && c.svpReferenceNo.startsWith(`SVP-${year}-`)) {
+              const num = parseInt(c.svpReferenceNo.split('-')[2], 10);
+              return num > max ? num : max;
+            }
+            return max;
+          }, 0);
+          formattedSVPReference = `SVP-${year}-${String(maxNum + 1).padStart(3, '0')}`;
         }
-      });
-      const nextCustNumber = maxCustNumber + 1;
-      const formattedCustomerNumber = `SVP-CUS-${currentYear}-${nextCustNumber.toString().padStart(4, '0')}`;
+      } catch (err) {
+        console.warn('[CRM Context] Failed to execute get_next_svp_reference_no RPC:', err);
+        const year = new Date().getFullYear();
+        formattedSVPReference = `SVP-${year}-${String(Date.now()).slice(-3)}`;
+      }
 
       const newCustomer = {
         id: newId,
@@ -232,8 +210,7 @@ export const CRMDatabaseProvider = ({ children }) => {
         tags: customerData?.tags || [],
         createdAt: new Date().toISOString(),
         isDeleted: false,
-        customerNo: formattedCustomerNumber,
-        latestBillNo: null
+        svpReferenceNo: formattedSVPReference
       };
 
       // 1. Insert Customer Record into Supabase (Must complete first)
@@ -242,7 +219,7 @@ export const CRMDatabaseProvider = ({ children }) => {
       console.log(`[CRM Context] Customer inserted successfully. Active ID: ${activeCustomerId}`);
       
       // Track audit activity
-      await logAuditActivity('Customer Created', `Customer file created for ${newCustomer.customerName} (${formattedCustomerNumber}) with deal amount Rs. ${totalAmount}`, activeCustomerId);
+      await logAuditActivity('Customer Created', `Customer file created for ${newCustomer.customerName} (${formattedSVPReference}) with deal amount Rs. ${totalAmount}`, activeCustomerId);
       if (items && items.length > 0) {
         await logAuditActivity('Material Added', `Materials list initialized for ${newCustomer.customerName} (${items.length} products)`, activeCustomerId);
       }
@@ -751,7 +728,7 @@ export const CRMDatabaseProvider = ({ children }) => {
       // Audit logs
       await logAuditActivity(
         'Customer Deleted',
-        `Soft-deleted customer file for ${customer.customerName} (${customer.customerNo})`,
+        `Soft-deleted customer file for ${customer.customerName} (${customer.svpReferenceNo})`,
         customerId,
         'Active',
         'Deleted'
@@ -1065,7 +1042,7 @@ export const CRMDatabaseProvider = ({ children }) => {
 
   const createBillTransaction = async (billData, staffName = activeStaff) => {
     try {
-      console.log('[CRM Context] Creating bill transaction inside Supabase:', billData?.billNo);
+      console.log('[CRM Context] Creating bill transaction inside Supabase:', billData?.svpReferenceNo);
       const created = await databaseService.createBill(billData);
       
       // Log activity
@@ -1074,7 +1051,7 @@ export const CRMDatabaseProvider = ({ children }) => {
           customerId: billData.customerId,
           actionType: 'bill_generated',
           oldValue: '',
-          newValue: `Generated Bill: ${billData.billNo}. Amount: Rs. ${billData.finalAmount}`,
+          newValue: `Generated Bill: ${billData.svpReferenceNo || 'Unified Ref'}. Amount: Rs. ${billData.finalAmount}`,
           updatedBy: staffName,
           timestamp: new Date().toISOString()
         };
@@ -1082,7 +1059,7 @@ export const CRMDatabaseProvider = ({ children }) => {
         
         // Track audit activity
         const cust = customers.find(c => c.id === billData.customerId);
-        await logAuditActivity('Bill Generated', `Generated Invoice Bill ${billData.billNo} for Rs. ${billData.finalAmount}${cust ? ' for customer ' + cust.customerName : ''}`, billData.customerId, null, billData.billNo);
+        await logAuditActivity('Bill Generated', `Generated Invoice Bill ${billData.svpReferenceNo || 'Unified Ref'} for Rs. ${billData.finalAmount}${cust ? ' for customer ' + cust.customerName : ''}`, billData.customerId, null, billData.svpReferenceNo);
       } catch (actErr) {
         console.error('[CRM Context] Decoupled bill activity logging failed:', actErr);
       }

@@ -57,8 +57,7 @@ const mapToSupabase = (c) => {
     tags: c.tags || [],
     is_deleted: c.isDeleted || false,
     created_at: parseSafeDate(c.createdAt, new Date().toISOString()),
-    customer_no: c.customerNo || null,
-    latest_bill_no: c.latestBillNo || null
+    svp_reference_no: c.svpReferenceNo || null
   };
 };
 
@@ -92,8 +91,7 @@ const mapFromSupabase = (s) => {
     tags: s.tags || [],
     isDeleted: s.is_deleted || false,
     createdAt: s.created_at || new Date().toISOString(),
-    customerNo: s.customer_no || null,
-    latestBillNo: s.latest_bill_no || null
+    svpReferenceNo: s.svp_reference_no || null
   };
 };
 
@@ -209,8 +207,7 @@ const mapFileFromSupabase = (f) => ({
 const mapBillToSupabase = (b) => ({
   id: ensureUUID(b.id),
   customer_id: ensureUUID(b.customerId),
-  customer_no: b.customerNo || '',
-  bill_no: b.billNo || '',
+  svp_reference_no: b.svpReferenceNo || '',
   bill_date: b.billDate || new Date().toISOString().split('T')[0],
   final_amount: parseFloat(b.finalAmount || 0),
   gst_percent: parseFloat(b.gstPercent || 0),
@@ -223,8 +220,7 @@ const mapBillToSupabase = (b) => ({
 const mapBillFromSupabase = (b) => ({
   id: b.id,
   customerId: b.customer_id,
-  customerNo: b.customer_no,
-  billNo: b.bill_no,
+  svpReferenceNo: b.svp_reference_no,
   billDate: b.bill_date,
   finalAmount: parseFloat(b.final_amount || 0),
   gstPercent: parseFloat(b.gst_percent || 0),

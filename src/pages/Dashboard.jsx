@@ -221,19 +221,14 @@ export default function Dashboard({ onViewCustomer }) {
     const phone = c.phone || '';
     const requirement = c.requirement || '';
     const address = c.address || '';
-    const customerNo = c.customerNo || '';
-    const latestBillNo = c.latestBillNo || '';
-    const billTag = (c.tags || []).find(t => t.startsWith('BILL:')) || '';
-    const legacyBillNo = billTag ? billTag.split(':')[1] : '';
+    const svpReferenceNo = c.svpReferenceNo || '';
 
     const matchesSearch =
       name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       phone.includes(searchTerm) ||
       requirement.toLowerCase().includes(searchTerm.toLowerCase()) ||
       address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customerNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      latestBillNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      legacyBillNo.toLowerCase().includes(searchTerm.toLowerCase());
+      svpReferenceNo.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStage = selectedStage === 'All' || c.stage === selectedStage;
     const matchesStaff = selectedStaff === 'All' || c.assignedStaff === selectedStage || c.assignedStaff === selectedStaff; // Backwards compatibility stage match
@@ -1567,10 +1562,7 @@ export default function Dashboard({ onViewCustomer }) {
                           <div class="customer-cell">
                             <span class="name">{c.customerName || 'Unknown'}</span>
                             <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: '700', marginTop: '2px' }}>
-                              {(() => {
-                                const bTag = (c.tags || []).find(t => t.startsWith('BILL:'));
-                                return bTag ? bTag.split(':')[1] : 'No Bill#';
-                              })()}
+                              {c.svpReferenceNo || 'SVP-2026-001'}
                             </span>
                             <span class="phone">{c.phone || ''}</span>
                           </div>

@@ -28,11 +28,10 @@ const getLastY = (doc, fallback = 300) => {
 };
 
 // Generic Page Header Helper matching Sri Vasavi Plywoods business credentials
-const drawPDFHeader = (doc, title, docId = '', docDate = '', customerId = '') => {
+const drawPDFHeader = (doc, title, svpReferenceNo = '', docDate = '') => {
   const pageCount = doc.internal.getNumberOfPages();
   const dateFormatted = docDate || new Date().toLocaleDateString('en-IN');
-  const numberStr = docId || 'No: CRM-REP';
-  const customerRef = customerId || '';
+  const numberStr = svpReferenceNo || 'SVP-2026-001';
   
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
@@ -43,10 +42,8 @@ const drawPDFHeader = (doc, title, docId = '', docDate = '', customerId = '') =>
     
     // --- 1. LEFT: SVP LOGO ---
     try {
-      // Adjusted logo dimensions and placement to fit well on the left
       doc.addImage(svpLogoBase64, 'PNG', 30, 8, 70, 70);
     } catch (e) {
-      // Fallback if image fails to load
       doc.setFillColor(11, 15, 25);
       doc.ellipse(55, 45, 20, 20, 'F');
       doc.setTextColor(218, 165, 32);
@@ -80,8 +77,8 @@ const drawPDFHeader = (doc, title, docId = '', docDate = '', customerId = '') =>
     
     // Calculate right-aligned positions
     const rightMargin = 565.28;
-    doc.text(`BILL NO: ${numberStr}`, rightMargin, 38, { align: 'right' });
-    doc.text(`BILL DATE: ${dateFormatted}`, rightMargin, 50, { align: 'right' });
+    doc.text(`Reference No: ${numberStr}`, rightMargin, 38, { align: 'right' });
+    doc.text(`Date: ${dateFormatted}`, rightMargin, 50, { align: 'right' });
     
     // --- 4. THIN GOLD DIVIDER LINE BELOW HEADER ---
     doc.setDrawColor(218, 165, 32);
@@ -95,7 +92,7 @@ const drawPDFHeader = (doc, title, docId = '', docDate = '', customerId = '') =>
     doc.text(`Sri Vasavi Plywoods — Lalgudi`, 30, 820);
     doc.text(`${new Date().toLocaleDateString('en-IN')}, ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}`, rightMargin - doc.getTextWidth(`${new Date().toLocaleDateString('en-IN')}, ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}`), 820);
   }
-};
+};;
 
 // 1. Generate Combined All Customers Master Report (Clean ERP Portfolio Layout)
 export const generateAllCustomersPDF = (customers, payments, stages, action = 'download') => {
@@ -274,93 +271,89 @@ export const generateAllCustomersPDF = (customers, payments, stages, action = 'd
 export const generateCustomerProfilePDF = (customer, notesList = [], activityList = [], customerImages = [], action = 'download') => {
   const doc = new jsPDF({ format: 'a4', unit: 'pt' });
   
-  const profileId = `CL-${customer.id ? customer.id.split('_')[1] : 'FILE'}`;
-  const billTag = (customer.tags || []).find(t => t.startsWith('BILL:'));
-  const displayBillNo = billTag ? billTag.split(':')[1] : `EST-${Date.now().toString().substring(6)}`;
+  const refNo = customer.svpReferenceNo || 'SVP-2026-001';
   
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 565.28, 102, { align: 'right' });
-
   // Title
   doc.setFontSize(11);
   doc.setTextColor(...COLORS.NAVY_DARK);
-  doc.text(`CLIENT DIRECTORY FILE: ${customer.customerName.toUpperCase()}`, 30, 126);
-
-  // Thick Gold Divider
-  doc.setFillColor(218, 165, 32);
-  doc.rect(30, 134, 535.28, 3, 'F');
+  doc.text(`CLIENT DIRECTORY FILE: ${customer.customerName.toUpperCase()}`, 30, 96);
 
   // Customer Details Block
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text(`Customer No: ${customer.customerNo || 'SVP-CUS-2026-0000'}`, 30, 142);
-  doc.text('TO:', 30, 154);
+  doc.text('Customer Ref:', 30, 110);
+  doc.setTextColor(...COLORS.NAVY_DARK);
+  doc.text(refNo, 30, 120);
+  doc.setTextColor(...COLORS.TEXT_MUTED);
+  doc.text('TO:', 30, 134);
 
   doc.setFontSize(11);
   doc.setTextColor(...COLORS.NAVY_DARK);
-  doc.text(String(customer.customerName || 'N/A'), 30, 168);
+  doc.text(String(customer.customerName || 'N/A'), 30, 148);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(`Address: ${customer.address || 'Site address not specified.'}`, 30, 183);
-  doc.text(`Mobile: ${customer.phone || 'N/A'}`, 30, 197);
+  doc.text(`Address: ${customer.address || 'Site address not specified.'}`, 30, 161);
+  doc.text(`Mobile: ${customer.phone || 'N/A'}`, 30, 175);
 
   // Primary Metadata Columns
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('PROJECT CATEGORY:', 330, 154);
-  doc.text('SALES EXECUTIVE:', 330, 168);
-  doc.text('DEAL PRIORITY:', 330, 182);
-  doc.text('PIPELINE STAGE:', 330, 196);
+  doc.text('PROJECT CATEGORY:', 330, 134);
+  doc.text('SALES EXECUTIVE:', 330, 148);
+  doc.text('DEAL PRIORITY:', 330, 162);
+  doc.text('PIPELINE STAGE:', 330, 176);
 
   doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(String(customer.projectType || 'Plywood').toUpperCase(), 460, 154);
-  doc.text(String(customer.assignedStaff || 'Unassigned'), 460, 168);
-  doc.text(String(customer.priority || 'Medium').toUpperCase(), 460, 182);
-  doc.text(String(customer.stage || 'New Lead').toUpperCase(), 460, 196);
+  doc.text(String(customer.projectType || 'Plywood').toUpperCase(), 460, 134);
+  doc.text(String(customer.assignedStaff || 'Unassigned'), 460, 148);
+  doc.text(String(customer.priority || 'Medium').toUpperCase(), 460, 162);
+  doc.text(String(customer.stage || 'New Lead').toUpperCase(), 460, 176);
+
+  // Thick Gold Divider
+  doc.setFillColor(218, 165, 32);
+  doc.rect(30, 184, 535.28, 3, 'F');
 
   // Rounded 3-Column Summary Card (Safe Rs. formatting)
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(...COLORS.BORDER_GRAY);
   doc.setLineWidth(1);
-  doc.roundedRect(30, 212, 535.28, 72, 6, 6, 'FD');
+  doc.roundedRect(30, 196, 535.28, 72, 6, 6, 'FD');
 
   // Vertical Separators
-  doc.line(205, 212, 205, 284);
-  doc.line(385, 212, 385, 284);
+  doc.line(205, 196, 205, 268);
+  doc.line(385, 196, 385, 268);
 
   // Column 1: Material Total
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('TOTAL DEAL AMOUNT', 117, 232, { align: 'center' });
+  doc.text('TOTAL DEAL AMOUNT', 117, 216, { align: 'center' });
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.NAVY_DARK);
-  doc.text(`Rs. ${Number(customer.amount || 0).toLocaleString('en-IN')}`, 117, 258, { align: 'center' });
+  doc.text(`Rs. ${Number(customer.amount || 0).toLocaleString('en-IN')}`, 117, 242, { align: 'center' });
 
   // Column 2: Advance Collected
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('ADVANCE COLLECTED', 295, 232, { align: 'center' });
+  doc.text('ADVANCE COLLECTED', 295, 216, { align: 'center' });
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.STATUS_GREEN);
-  doc.text(`Rs. ${Number(customer.advancePaid || 0).toLocaleString('en-IN')}`, 295, 258, { align: 'center' });
+  doc.text(`Rs. ${Number(customer.advancePaid || 0).toLocaleString('en-IN')}`, 295, 242, { align: 'center' });
 
   // Column 3: Outstanding Balance
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('OUTSTANDING BALANCE', 475, 232, { align: 'center' });
+  doc.text('OUTSTANDING BALANCE', 475, 216, { align: 'center' });
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.STATUS_RED);
-  doc.text(`Rs. ${Number(customer.pendingAmount || 0).toLocaleString('en-IN')}`, 475, 258, { align: 'center' });
+  doc.text(`Rs. ${Number(customer.pendingAmount || 0).toLocaleString('en-IN')}`, 475, 242, { align: 'center' });
 
   // Project Materials / Specifications Table
-  let currentY = 302;
+  let currentY = 286;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
   doc.setTextColor(...COLORS.NAVY_DARK);
@@ -564,7 +557,7 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
   doc.text('Customer Signature', 105, finalY + 52, { align: 'center' });
   doc.text('Authorized Signature', 490, finalY + 52, { align: 'center' });
 
-  drawPDFHeader(doc, `Customer Profile: ${customer.customerName}`, displayBillNo, new Date().toLocaleDateString('en-IN'), profileId);
+  drawPDFHeader(doc, `Customer Profile: ${customer.customerName}`, refNo, new Date().toLocaleDateString('en-IN'));
   
   if (action === 'print' || action === 'share') {
     const newWindow = window.open('', '_blank');
@@ -576,7 +569,7 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
   } else if (action === 'preview') {
     return doc.output('datauristring');
   } else {
-    doc.save(`CustomerProfile_${customer.customerName.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`${refNo}.pdf`);
   }
   return doc;
 };
@@ -585,79 +578,76 @@ export const generateCustomerProfilePDF = (customer, notesList = [], activityLis
 export const generateInvoicePDF = (customer, paymentsList, action = 'download') => {
   const doc = new jsPDF({ format: 'a4', unit: 'pt' });
 
-  const invoiceId = customer.latestBillNo || `SVP-BILL-${new Date().getFullYear()}-0000`;
-  const profileId = customer.customerNo || 'SVP-CUS-2026-0000';
-
-  // Document Number & Date below gold line
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 565.28, 102, { align: 'right' });
+  const refNo = customer.svpReferenceNo || 'SVP-2026-001';
 
   // TO Customer Section
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text(`Customer No: ${customer.customerNo || 'SVP-CUS-2026-0000'}`, 30, 110);
-  doc.text('TO:', 30, 122);
+  doc.text('Customer Ref:', 30, 96);
+  doc.setTextColor(...COLORS.NAVY_DARK);
+  doc.text(refNo, 30, 106);
+  
+  doc.setTextColor(...COLORS.TEXT_MUTED);
+  doc.text('TO:', 30, 120);
 
   doc.setFontSize(11);
   doc.setTextColor(...COLORS.NAVY_DARK);
-  doc.text(String(customer.customerName || 'N/A'), 30, 136);
+  doc.text(String(customer.customerName || 'N/A'), 30, 134);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(String(customer.address || 'Lalgudi'), 30, 151);
-  doc.text(`Ph: ${customer.phone || 'N/A'}`, 30, 165);
+  doc.text(String(customer.address || 'Lalgudi'), 30, 147);
+  doc.text(`Ph: ${customer.phone || 'N/A'}`, 30, 161);
 
   // Accent Gold thick separator below customer section
   doc.setFillColor(218, 165, 32);
-  doc.rect(30, 176, 535.28, 3.2, 'F');
+  doc.rect(30, 172, 535.28, 3.2, 'F');
 
   // Rounded 3-Column Payment Summary Card exactly like reference image
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(...COLORS.BORDER_GRAY);
   doc.setLineWidth(1);
-  doc.roundedRect(30, 190, 535.28, 72, 6, 6, 'FD');
+  doc.roundedRect(30, 184, 535.28, 72, 6, 6, 'FD');
 
   // Vertical Separators
-  doc.line(205, 190, 205, 262);
-  doc.line(385, 190, 385, 262);
+  doc.line(205, 184, 205, 256);
+  doc.line(385, 184, 385, 256);
 
   // Column 1: Total Amount
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('TOTAL AMOUNT', 117, 210, { align: 'center' });
+  doc.text('TOTAL AMOUNT', 117, 204, { align: 'center' });
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.NAVY_DARK);
-  doc.text(`Rs. ${Number(customer.amount || 0).toLocaleString('en-IN')}`, 117, 236, { align: 'center' });
+  doc.text(`Rs. ${Number(customer.amount || 0).toLocaleString('en-IN')}`, 117, 230, { align: 'center' });
 
   // Column 2: Advance Paid
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('ADVANCE PAID', 295, 210, { align: 'center' });
+  doc.text('ADVANCE PAID', 295, 204, { align: 'center' });
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.STATUS_GREEN);
-  doc.text(`Rs. ${Number(customer.advancePaid || 0).toLocaleString('en-IN')}`, 295, 236, { align: 'center' });
+  doc.text(`Rs. ${Number(customer.advancePaid || 0).toLocaleString('en-IN')}`, 295, 230, { align: 'center' });
 
   // Column 3: Pending Balance
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('PENDING BALANCE', 475, 210, { align: 'center' });
+  doc.text('PENDING BALANCE', 475, 204, { align: 'center' });
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.STATUS_RED);
-  doc.text(`Rs. ${Number(customer.pendingAmount || 0).toLocaleString('en-IN')}`, 475, 236, { align: 'center' });
+  doc.text(`Rs. ${Number(customer.pendingAmount || 0).toLocaleString('en-IN')}`, 475, 230, { align: 'center' });
 
   // Bottom row inside card: Payment Status badge
   doc.setDrawColor(...COLORS.BORDER_GRAY);
-  doc.line(30, 262, 565.28, 262);
+  doc.line(30, 256, 565.28, 256);
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('Payment Status:', 45, 276);
+  doc.text('Payment Status:', 45, 270);
 
   // Status Badge Pill
   const payStatus = customer.paymentStatus || 'Pending';
@@ -665,20 +655,20 @@ export const generateInvoicePDF = (customer, paymentsList, action = 'download') 
   const badgeTextCol = payStatus === 'Paid' ? [16, 185, 129] : payStatus === 'Partial' ? [217, 119, 6] : [239, 68, 68];
   
   doc.setFillColor(...badgeBg);
-  doc.roundedRect(120, 267, 45, 13, 2, 2, 'F');
+  doc.roundedRect(120, 261, 45, 13, 2, 2, 'F');
   
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(...badgeTextCol);
-  doc.text(payStatus, 142.5, 276, { align: 'center' });
+  doc.text(payStatus, 142.5, 270, { align: 'center' });
 
   // Divider below Payment Card
   doc.setDrawColor(...COLORS.BORDER_GRAY);
   doc.setLineWidth(0.5);
-  doc.line(30, 292, 565.28, 292);
+  doc.line(30, 286, 565.28, 286);
 
   // Material / Product Table
-  let startTableY = 304;
+  let startTableY = 298;
   const itemsHeaders = [['S.No', 'Product Name', 'Qty', 'Unit', 'Rate (Rs.)', 'GST', 'Amount (Rs.)']];
   
   const itemsRows = (customer.items && Array.isArray(customer.items) && customer.items.length > 0)
@@ -786,7 +776,7 @@ export const generateInvoicePDF = (customer, paymentsList, action = 'download') 
   doc.text('This is a system-generated document. For Sri Vasavi Plywoods.', 30, sigY + 78);
 
   // Draw Header
-  drawPDFHeader(doc, 'Sales Tax Invoice', invoiceId, new Date().toLocaleDateString('en-IN'), profileId);
+  drawPDFHeader(doc, 'Sales Tax Invoice', refNo, new Date().toLocaleDateString('en-IN'));
   
   if (action === 'print' || action === 'share') {
     const newWindow = window.open('', '_blank');
@@ -798,7 +788,7 @@ export const generateInvoicePDF = (customer, paymentsList, action = 'download') 
   } else if (action === 'preview') {
     return doc.output('datauristring');
   } else {
-    doc.save(`Invoice_${customer.customerName.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`${refNo}.pdf`);
   }
   return doc;
 };
@@ -807,19 +797,17 @@ export const generateInvoicePDF = (customer, paymentsList, action = 'download') 
 export const generateQuotationPDF = (customer, action = 'download') => {
   const doc = new jsPDF({ format: 'a4', unit: 'pt' });
 
-  const quotationId = `QT-${Date.now().toString().substring(6)}`;
-
-  // Document Number & Date below gold line
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 565.28, 102, { align: 'right' });
+  const refNo = customer.svpReferenceNo || 'SVP-2026-001';
 
   // TO Customer Section
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text(`Customer No: ${customer.customerNo || 'SVP-CUS-2026-0000'}`, 30, 108);
+  doc.text('Customer Ref:', 30, 96);
+  doc.setTextColor(...COLORS.NAVY_DARK);
+  doc.text(refNo, 30, 106);
+  
+  doc.setTextColor(...COLORS.TEXT_MUTED);
   doc.text('TO:', 30, 120);
 
   doc.setFontSize(11);
@@ -829,73 +817,73 @@ export const generateQuotationPDF = (customer, action = 'download') => {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(String(customer.address || 'Lalgudi'), 30, 149);
-  doc.text(`Ph: ${customer.phone || 'N/A'}`, 30, 163);
+  doc.text(String(customer.address || 'Lalgudi'), 30, 147);
+  doc.text(`Ph: ${customer.phone || 'N/A'}`, 30, 161);
 
   // Accent Gold thick separator below customer section
   doc.setFillColor(218, 165, 32);
-  doc.rect(30, 174, 535.28, 3.2, 'F');
+  doc.rect(30, 172, 535.28, 3.2, 'F');
 
   // Rounded 3-Column Payment Summary Card exactly like reference image
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(...COLORS.BORDER_GRAY);
   doc.setLineWidth(1);
-  doc.roundedRect(30, 188, 535.28, 72, 6, 6, 'FD');
+  doc.roundedRect(30, 184, 535.28, 72, 6, 6, 'FD');
 
   // Vertical Separators
-  doc.line(205, 188, 205, 260);
-  doc.line(385, 188, 385, 260);
+  doc.line(205, 184, 205, 256);
+  doc.line(385, 184, 385, 256);
 
   // Column 1: Estimated Total
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('ESTIMATED TOTAL', 117, 208, { align: 'center' });
+  doc.text('ESTIMATED TOTAL', 117, 204, { align: 'center' });
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.NAVY_DARK);
-  doc.text(`Rs. ${Number(customer.amount || 0).toLocaleString('en-IN')}`, 117, 234, { align: 'center' });
+  doc.text(`Rs. ${Number(customer.amount || 0).toLocaleString('en-IN')}`, 117, 230, { align: 'center' });
 
   // Column 2: Estimate Validity
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('QUOTE VALIDITY', 295, 208, { align: 'center' });
+  doc.text('QUOTE VALIDITY', 295, 204, { align: 'center' });
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.STATUS_GREEN);
-  doc.text('15 DAYS', 295, 234, { align: 'center' });
+  doc.text('15 DAYS', 295, 230, { align: 'center' });
 
   // Column 3: Net Balance Due
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('NET BALANCE DUE', 475, 208, { align: 'center' });
+  doc.text('NET BALANCE DUE', 475, 204, { align: 'center' });
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.STATUS_RED);
-  doc.text(`Rs. ${Number(customer.pendingAmount || 0).toLocaleString('en-IN')}`, 475, 234, { align: 'center' });
+  doc.text(`Rs. ${Number(customer.pendingAmount || 0).toLocaleString('en-IN')}`, 475, 230, { align: 'center' });
 
   // Bottom row inside card: Payment Status badge
   doc.setDrawColor(...COLORS.BORDER_GRAY);
-  doc.line(30, 260, 565.28, 260);
+  doc.line(30, 256, 565.28, 256);
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.TEXT_MUTED);
-  doc.text('Quotation Status:', 45, 274);
+  doc.text('Quotation Status:', 45, 270);
 
   // Status Badge Pill
   doc.setFillColor(254, 243, 199); // Yellow/Amber background
-  doc.roundedRect(120, 265, 55, 13, 2, 2, 'F');
+  doc.roundedRect(120, 261, 55, 13, 2, 2, 'F');
   
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(217, 119, 6);
-  doc.text('ESTIMATE', 147.5, 274, { align: 'center' });
+  doc.text('ESTIMATE', 147.5, 270, { align: 'center' });
 
   // Divider below Card
   doc.setDrawColor(...COLORS.BORDER_GRAY);
   doc.setLineWidth(0.5);
-  doc.line(30, 290, 565.28, 290);
+  doc.line(30, 286, 565.28, 286);
 
   // Material / Product Table
-  let startTableY = 302;
+  let startTableY = 298;
   const itemsHeaders = [['S.No', 'Product Name', 'Qty', 'Unit', 'Rate (Rs.)', 'GST', 'Amount (Rs.)']];
   
   const itemsRows = (customer.items && Array.isArray(customer.items) && customer.items.length > 0)
@@ -1000,7 +988,7 @@ export const generateQuotationPDF = (customer, action = 'download') => {
   doc.text('This is a formal quotation estimation for materials and labor. Valid for 15 days.', 30, sigY + 78);
 
   // Draw Header
-  drawPDFHeader(doc, 'Commercial Quotation', quotationId, new Date().toLocaleDateString('en-IN'));
+  drawPDFHeader(doc, 'Commercial Quotation', refNo, new Date().toLocaleDateString('en-IN'));
   
   if (action === 'print' || action === 'share') {
     const newWindow = window.open('', '_blank');
@@ -1012,7 +1000,7 @@ export const generateQuotationPDF = (customer, action = 'download') => {
   } else if (action === 'preview') {
     return doc.output('datauristring');
   } else {
-    doc.save(`Quotation_${customer.customerName.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`${refNo}.pdf`);
   }
   return doc;
 };
@@ -1021,21 +1009,15 @@ export const generateQuotationPDF = (customer, action = 'download') => {
 export const generateCustomerHistoryPDF = (customer, activityList, action = 'download') => {
   const doc = new jsPDF({ format: 'a4', unit: 'pt' });
 
-  const historyId = `REP-HIST-${customer.id ? customer.id.split('_')[1] : 'FILE'}`;
-
-  // Document Number & Date below gold line
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 565.28, 102, { align: 'right' });
+  const refNo = customer.svpReferenceNo || 'SVP-2026-001';
 
   doc.setFontSize(11);
   doc.setTextColor(...COLORS.NAVY_DARK);
-  doc.text(`PERMANENT AUDIT TRAIL LOG: ${customer.customerName.toUpperCase()}`, 30, 120);
+  doc.text(`PERMANENT AUDIT TRAIL LOG: ${customer.customerName.toUpperCase()}`, 30, 96);
 
   // Thick Gold Divider
   doc.setFillColor(218, 165, 32);
-  doc.rect(30, 128, 535.28, 3, 'F');
+  doc.rect(30, 104, 535.28, 3, 'F');
 
   const historyHeaders = [['Timestamp', 'Action Type', 'Executive Staff', 'Description of Changes / Values']];
   const historyRows = (activityList || []).map(act => [
@@ -1049,12 +1031,12 @@ export const generateCustomerHistoryPDF = (customer, activityList, action = 'dow
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(9.5);
     doc.setTextColor(...COLORS.TEXT_MUTED);
-    doc.text('No activity items are logged for this customer.', 30, 145);
+    doc.text('No activity items are logged for this customer.', 30, 120);
   } else {
     autoTable(doc, {
       head: historyHeaders,
       body: historyRows,
-      startY: 145,
+      startY: 120,
       margin: { left: 30, right: 30 },
       styles: { fontSize: 8, cellPadding: 5.5, textColor: COLORS.TEXT_DARK, lineColor: COLORS.BORDER_GRAY, lineWidth: 0.5 },
       headStyles: { fillColor: [241, 245, 249], textColor: COLORS.TEXT_DARK, fontStyle: 'bold' },
@@ -1079,7 +1061,7 @@ export const generateCustomerHistoryPDF = (customer, activityList, action = 'dow
   doc.text('Audited By', 105, finalY + 52, { align: 'center' });
   doc.text('Management Signature', 490, finalY + 52, { align: 'center' });
 
-  drawPDFHeader(doc, 'Permanent Activity Log', historyId, new Date().toLocaleDateString('en-IN'));
+  drawPDFHeader(doc, 'Permanent Activity Log', refNo, new Date().toLocaleDateString('en-IN'));
   
   if (action === 'print' || action === 'share') {
     const newWindow = window.open('', '_blank');
@@ -1091,7 +1073,7 @@ export const generateCustomerHistoryPDF = (customer, activityList, action = 'dow
   } else if (action === 'preview') {
     return doc.output('datauristring');
   } else {
-    doc.save(`ActivityLog_${customer.customerName.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`${refNo}.pdf`);
   }
   return doc;
 };

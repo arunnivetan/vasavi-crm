@@ -381,27 +381,11 @@ export default function CustomerDetail({ customerId, onBack }) {
 
   const handleExportBillFlow = async () => {
     try {
-      // 1. Generate unique bill number
-      const currentYear = new Date().getFullYear();
-      let maxBillNumber = 0;
-      
-      (bills || []).forEach(b => {
-        if (b.billNo && b.billNo.startsWith(`SVP-BILL-${currentYear}-`)) {
-          const parts = b.billNo.split('-');
-          const numStr = parts[parts.length - 1];
-          const num = parseInt(numStr, 10);
-          if (!isNaN(num) && num > maxBillNumber) maxBillNumber = num;
-        }
-      });
-      const nextBillNumber = maxBillNumber + 1;
-      const formattedBillNo = `SVP-BILL-${currentYear}-${nextBillNumber.toString().padStart(4, '0')}`;
-      
-      // 2. Save bill record in database
+      // 1. Save bill record in database with unified reference
       const billRecord = {
         id: crypto.randomUUID(),
         customerId: customer.id,
-        customerNo: customer.customerNo || 'SVP-CUS-2026-0000',
-        billNo: formattedBillNo,
+        svpReferenceNo: customer.svpReferenceNo || 'SVP-2026-001',
         billDate: new Date().toLocaleDateString('en-IN'),
         finalAmount: parseFloat(customer.amount || 0),
         gstPercent: parseFloat(customer.taxPercent || 0),
@@ -412,12 +396,7 @@ export default function CustomerDetail({ customerId, onBack }) {
       
       await createBillTransaction(billRecord);
       
-      // 3. Attach bill to customer
-      await editCustomer(customer.id, {
-        latestBillNo: formattedBillNo
-      });
-      
-      // 4. Open PDF preview
+      // 2. Open PDF preview
       setIsPDFPreviewOpen(true);
       
     } catch (err) {
@@ -471,7 +450,12 @@ export default function CustomerDetail({ customerId, onBack }) {
                 <polyline points="12 19 5 12 12 5"></polyline>
               </svg>
             </button>
-            <h2 className="cust-detail-name" style={{ margin: 0, fontSize: '20px', fontWeight: '800' }}>{customer.customerName}</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <h2 className="cust-detail-name" style={{ margin: 0, fontSize: '20px', fontWeight: '800' }}>{customer.customerName}</h2>
+              <span style={{ fontSize: '12.5px', fontWeight: '800', color: 'var(--accent)', letterSpacing: '0.5px' }}>
+                [ {customer.svpReferenceNo || 'SVP-2026-001'} ]
+              </span>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             {customer.phone && (
@@ -519,10 +503,7 @@ export default function CustomerDetail({ customerId, onBack }) {
             {customer.priority}
           </span>
           <span className="badge" style={{ backgroundColor: 'rgba(212, 166, 79, 0.1)', color: 'var(--accent)', border: '1px solid rgba(212, 166, 79, 0.25)', fontSize: '11px', padding: '4px 8px', fontWeight: '600' }}>
-            {customer.customerNo || 'SVP-CUS-2026-0000'}
-          </span>
-          <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', padding: '4px 8px', fontWeight: '600' }}>
-            {customer.latestBillNo || 'NO BILL ISSUED'}
+            Ref: {customer.svpReferenceNo || 'SVP-2026-001'}
           </span>
         </div>
 
@@ -1957,15 +1938,16 @@ export default function CustomerDetail({ customerId, onBack }) {
                   
                   {/* RIGHT: METADATA */}
                   <div style={{ flex: '1', textAlign: 'right' }}>
-                    <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>BILL NO: <span style={{ color: '#666', fontWeight: 'normal' }}>{customer.latestBillNo || 'NO BILL ISSUED'}</span></p>
-                    <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>BILL DATE: <span style={{ color: '#666', fontWeight: 'normal' }}>{new Date().toLocaleDateString('en-IN')}</span></p>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>Reference No: <span style={{ color: '#666', fontWeight: 'normal' }}>{customer.svpReferenceNo || 'SVP-2026-001'}</span></p>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '11px', color: '#212b36', fontWeight: 'bold' }}>Date: <span style={{ color: '#666', fontWeight: 'normal' }}>{new Date().toLocaleDateString('en-IN')}</span></p>
                   </div>
                 </div>
                 
                 {/* CUSTOMER DETAILS ROW */}
                 <div style={{ marginBottom: '20px' }}>
-                  <p style={{ margin: '0 0 5px 0', color: '#6c757d', fontSize: '12px', fontWeight: 'bold' }}>Customer No: <span style={{ color: '#212b36', fontWeight: 'normal' }}>{customer.customerNo || 'SVP-CUS-2026-0000'}</span></p>
-                  <p style={{ margin: '10px 0 5px 0', color: '#6c757d', fontSize: '12px', fontWeight: 'bold' }}>TO:</p>
+                  <p style={{ margin: '0 0 2px 0', color: '#6c757d', fontSize: '11px', fontWeight: 'bold' }}>Customer Ref:</p>
+                  <p style={{ margin: '0 0 8px 0', color: '#212b36', fontSize: '13px', fontWeight: 'bold' }}>{customer.svpReferenceNo || 'SVP-2026-001'}</p>
+                  <p style={{ margin: '8px 0 5px 0', color: '#6c757d', fontSize: '12px', fontWeight: 'bold' }}>TO:</p>
                   <p style={{ margin: 0, fontWeight: 'bold', fontSize: '16px', color: '#0b0f19' }}>{customer.customerName}</p>
                   <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#212b36' }}>{customer.address || 'Address not specified'}</p>
                   <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#212b36' }}>Ph: {customer.phone || 'N/A'}</p>
