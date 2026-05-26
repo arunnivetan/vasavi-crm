@@ -1,0 +1,6 @@
+{
+  "appId": "com.srivasavi.crm",
+  "appName": "Sri Vasavi CRM",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
