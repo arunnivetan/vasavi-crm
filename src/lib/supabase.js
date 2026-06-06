@@ -7,3 +7,7 @@ export const supabase = createClient(
   supabaseUrl,
   supabaseKey
 )
+
+
+
+//create an mobile application using flutter (dart). i need this same website as a mobile application. this exact website with all functionalities - Use the same theme, same database, and same backend logic. 

@@ -35,6 +35,7 @@ export default function CustomerDetail({ customerId, onBack }) {
     deleteCustomerImage,
     createBillTransaction,
     logWhatsAppOpened,
+    logPdfGeneration,
     crmUsers,
     crmUserActivities
   } = useCRMDatabase();
@@ -62,6 +63,14 @@ export default function CustomerDetail({ customerId, onBack }) {
   // --- STATE STORES ---
   const [activeTab, setActiveTab] = useState('notes'); // 'notes' or 'history'
   const [customerImages, setCustomerImages] = useState([]);
+  
+  // Workspace and UI states
+  const [isEditing, setIsEditing] = useState(false);
+  const [requirementsViewMode, setRequirementsViewMode] = useState('table');
+  const [searchProductQuery, setSearchProductQuery] = useState('');
+  const [showAutoSaveDot, setShowAutoSaveDot] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  const [editStage, setEditStage] = useState('');
   
   // Modals / Overlay Form states
   const [isEditInfoOpen, setIsEditInfoOpen] = useState(false);
@@ -198,6 +207,17 @@ export default function CustomerDetail({ customerId, onBack }) {
     ]);
   };
 
+  const handleSelectProductToAdd = (prodName) => {
+    const newItems = [...editItems];
+    if (newItems.length === 1 && newItems[0].productName === '') {
+      newItems[0] = { productName: prodName, qty: 1, unit: 'Sheets', rate: 0, total: 0, status: 'Pending', category: 'Material' };
+    } else {
+      newItems.push({ productName: prodName, qty: 1, unit: 'Sheets', rate: 0, total: 0, status: 'Pending', category: 'Material' });
+    }
+    setEditItems(newItems);
+    setSearchProductQuery('');
+  };
+
   // New reminder form state
   const [remType, setRemType] = useState('Follow-up Call');
   const [remDate, setRemDate] = useState('');
@@ -220,6 +240,70 @@ export default function CustomerDetail({ customerId, onBack }) {
   useEffect(() => {
     fetchCustomerImages();
   }, [customerId]);
+
+  // --- DRAFT MANAGEMENT EFFECTS ---
+  useEffect(() => {
+    if (isEditing && customerId) {
+      const savedDraft = localStorage.getItem(`crm_draft_${customerId}`);
+      if (savedDraft) {
+        setHasDraft(true);
+      } else {
+        setHasDraft(false);
+      }
+    }
+  }, [isEditing, customerId]);
+
+  // Auto-save draft effect
+  useEffect(() => {
+    if (!isEditing || !customerId) return;
+    const interval = setInterval(() => {
+      const draftData = {
+        name: editName,
+        phone: editPhone,
+        address: editAddress,
+        projType: editProjType,
+        staff: editStaff,
+        priority: editPriority,
+        items: editItems,
+        discount: editDiscount,
+        taxPercent: editTaxPercent,
+        advancePaid: editAdvancePaid,
+        stage: editStage
+      };
+      localStorage.setItem(`crm_draft_${customerId}`, JSON.stringify(draftData));
+      setShowAutoSaveDot(true);
+      setTimeout(() => setShowAutoSaveDot(false), 2000);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isEditing, customerId, editName, editPhone, editAddress, editProjType, editStaff, editPriority, editItems, editDiscount, editTaxPercent, editAdvancePaid, editStage]);
+
+  const restoreDraft = () => {
+    const savedDraft = localStorage.getItem(`crm_draft_${customerId}`);
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        if (draft.name !== undefined) setEditName(draft.name);
+        if (draft.phone !== undefined) setEditPhone(draft.phone);
+        if (draft.address !== undefined) setEditAddress(draft.address);
+        if (draft.projType !== undefined) setEditProjType(draft.projType);
+        if (draft.staff !== undefined) setEditStaff(draft.staff);
+        if (draft.priority !== undefined) setEditPriority(draft.priority);
+        if (draft.items !== undefined) setEditItems(draft.items);
+        if (draft.discount !== undefined) setEditDiscount(draft.discount);
+        if (draft.taxPercent !== undefined) setEditTaxPercent(draft.taxPercent);
+        if (draft.advancePaid !== undefined) setEditAdvancePaid(draft.advancePaid);
+        if (draft.stage !== undefined) setEditStage(draft.stage);
+        setHasDraft(false);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
+  const discardDraft = () => {
+    localStorage.removeItem(`crm_draft_${customerId}`);
+    setHasDraft(false);
+  };
 
   if (!customer) return null;
 
@@ -246,6 +330,7 @@ export default function CustomerDetail({ customerId, onBack }) {
       projectType: editProjType,
       assignedStaff: editStaff,
       priority: editPriority,
+      stage: editStage,
 
       // Costing workspace fields
       items: activeItems,
@@ -258,6 +343,8 @@ export default function CustomerDetail({ customerId, onBack }) {
       pendingAmount: pending,
       paymentStatus: paymentStatus
     });
+    localStorage.removeItem(`crm_draft_${customerId}`);
+    setIsEditing(false);
     setIsEditInfoOpen(false);
   };
 
@@ -437,6 +524,956 @@ export default function CustomerDetail({ customerId, onBack }) {
   const billTag = (customer.tags || []).find(t => t.startsWith('BILL:'));
   const billNumber = billTag ? billTag.split(':')[1] : 'No Bill#';
 
+  // --- REDESIGNED EDIT SCREEN HELPERS & STATES ---
+  const [expandedItems, setExpandedItems] = useState({});
+  const toggleItemExpanded = (idx) => {
+    setExpandedItems(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
+  // --- QUICK PAYMENT COLLECT STATE ---
+  const [isQuickCollectOpen, setIsQuickCollectOpen] = useState(false);
+  const [quickCollectAmount, setQuickCollectAmount] = useState('');
+  const [quickCollectMode, setQuickCollectMode] = useState('Cash');
+  const [quickCollectNotes, setQuickCollectNotes] = useState('');
+
+  const handleQuickCollectSubmit = async (e) => {
+    e.preventDefault();
+    const amt = parseFloat(quickCollectAmount || 0);
+    if (amt <= 0) return;
+    try {
+      await addPaymentTransaction(customerId, amt, quickCollectMode, quickCollectNotes || 'Quick Collection installment');
+      // Increment advance paid in form
+      const prevAdvance = parseFloat(editAdvancePaid || 0);
+      setEditAdvancePaid(prevAdvance + amt);
+      setIsQuickCollectOpen(false);
+      setQuickCollectAmount('');
+      setQuickCollectNotes('');
+    } catch (err) {
+      alert('Failed to record collection: ' + err.message);
+    }
+  };
+
+  if (isEditing) {
+    // Render the premium edit customer workspace
+    const finalBillValue = editSubtotal - editDiscountVal + editTaxAmount;
+    const balanceDueValue = Math.max(0, finalBillValue - parseFloat(editAdvancePaid || 0));
+    
+    // Status color calculations
+    let paymentStatusText = 'Pending';
+    let paymentStatusClass = 'pending';
+    if (parseFloat(editAdvancePaid || 0) > 0) {
+      paymentStatusText = balanceDueValue <= 0 ? 'Paid' : 'Partial';
+      paymentStatusClass = balanceDueValue <= 0 ? 'paid' : 'partial';
+    }
+
+    // Filter products for autocomplete
+    const filteredProducts = COMMON_PRODUCTS.filter(prod => 
+      prod.toLowerCase().includes(searchProductQuery.toLowerCase()) &&
+      searchProductQuery.trim() !== ''
+    );
+
+    return (
+      <div className="animate-slide-in">
+        {/* DRAFT DETECTED BANNER */}
+        {hasDraft && (
+          <div style={{
+            background: 'rgba(212, 166, 79, 0.15)',
+            border: '1.5px solid var(--accent)',
+            borderRadius: '12px',
+            padding: '12px 18px',
+            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            animation: 'fadeIn 0.3s ease'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '18px' }}>⚠️</span>
+              <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-white)' }}>
+                We found an unsaved local draft for this customer. Would you like to restore it?
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-primary btn-sm" onClick={restoreDraft}>Restore Draft</button>
+              <button className="btn btn-secondary btn-sm" onClick={discardDraft}>Discard</button>
+            </div>
+          </div>
+        )}
+
+        {/* WORKSPACE HEADER */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: '800', margin: 0 }}>Edit Client & Quotation</h2>
+              {showAutoSaveDot && (
+                <div className="autosave-indicator">
+                  <div className="autosave-dot"></div>
+                  <span>Draft saved</span>
+                </div>
+              )}
+            </div>
+            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              {customer.customerName} • [ {customer.svpReferenceNo || 'SVP-2026-001'} ]
+            </span>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={() => { localStorage.removeItem(`crm_draft_${customerId}`); setIsEditing(false); }}>
+            ← Back to View
+          </button>
+        </div>
+
+        {/* 2-COLUMN GRID WORKSPACE */}
+        <div className="edit-workspace">
+          
+          {/* LEFT SECTION (70%): Customer Info + Requirements */}
+          <div>
+            {/* Card 1: Customer Profile */}
+            <div className="glass-card-premium">
+              <div className="glass-card-title-premium">
+                <span>Customer Profile</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>BASIC INFORMATION</span>
+              </div>
+              <div className="floating-form-grid">
+                
+                {/* Customer Name */}
+                <div className="floating-group">
+                  <input
+                    type="text"
+                    id="edit-name"
+                    placeholder=" "
+                    className="floating-input"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    required
+                  />
+                  <label htmlFor="edit-name" className="floating-label">Customer Name</label>
+                </div>
+
+                {/* Phone Number */}
+                <div className="floating-group">
+                  <input
+                    type="tel"
+                    id="edit-phone"
+                    placeholder=" "
+                    className="floating-input"
+                    value={editPhone}
+                    onChange={e => setEditPhone(e.target.value)}
+                  />
+                  <label htmlFor="edit-phone" className="floating-label">Phone Number</label>
+                </div>
+
+                {/* Lead Stage Dropdown */}
+                <div className="floating-group">
+                  <select
+                    id="edit-stage"
+                    className="floating-select"
+                    value={editStage}
+                    onChange={e => setEditStage(e.target.value)}
+                  >
+                    {stages.map(stg => (
+                      <option key={stg.stageName} value={stg.stageName}>{stg.stageName}</option>
+                    ))}
+                  </select>
+                  <label htmlFor="edit-stage" className="floating-select-label">Lead Stage</label>
+                </div>
+
+                {/* Salesperson Dropdown */}
+                <div className="floating-group">
+                  <select
+                    id="edit-staff"
+                    className="floating-select"
+                    value={editStaff}
+                    onChange={e => setEditStaff(e.target.value)}
+                  >
+                    {staffList.map(stf => (
+                      <option key={stf} value={stf}>{stf}</option>
+                    ))}
+                  </select>
+                  <label htmlFor="edit-staff" className="floating-select-label">Salesperson</label>
+                </div>
+
+                {/* Project Type Dropdown */}
+                <div className="floating-group">
+                  <select
+                    id="edit-proj-type"
+                    className="floating-select"
+                    value={editProjType}
+                    onChange={e => setEditProjType(e.target.value)}
+                  >
+                    <option value="Hardware">Hardware Supplies</option>
+                    <option value="Plywood">Plywood & Boarding</option>
+                    <option value="Laminate">Laminates & Veneers</option>
+                    <option value="Interior design">Interior Fit-out</option>
+                    <option value="Contractor Work">Contractor Billing</option>
+                  </select>
+                  <label htmlFor="edit-proj-type" className="floating-select-label">Project Type</label>
+                </div>
+
+                {/* Deal Priority */}
+                <div className="floating-group">
+                  <select
+                    id="edit-priority"
+                    className="floating-select"
+                    value={editPriority}
+                    onChange={e => setEditPriority(e.target.value)}
+                  >
+                    <option value="High">🔴 High Priority</option>
+                    <option value="Medium">🟡 Medium Priority</option>
+                    <option value="Low">🟢 Low Priority</option>
+                  </select>
+                  <label htmlFor="edit-priority" className="floating-select-label">Priority</label>
+                </div>
+
+                {/* Delivery Site Address */}
+                <div className="floating-group-full">
+                  <input
+                    type="text"
+                    id="edit-address"
+                    placeholder=" "
+                    className="floating-input"
+                    value={editAddress}
+                    onChange={e => setEditAddress(e.target.value)}
+                  />
+                  <label htmlFor="edit-address" className="floating-label">Delivery Site Address</label>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Card 2: Requirements Workspace */}
+            <div className="glass-card-premium">
+              <div className="glass-card-title-premium" style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: '14px' }}>
+                <span>Quotation Requirements</span>
+                <div className="requirements-toggle-bar">
+                  <button
+                    type="button"
+                    className={`requirements-toggle-btn ${requirementsViewMode === 'table' ? 'active' : ''}`}
+                    onClick={() => setRequirementsViewMode('table')}
+                  >
+                    <span>📊</span> Spreadsheet
+                  </button>
+                  <button
+                    type="button"
+                    className={`requirements-toggle-btn ${requirementsViewMode === 'accordion' ? 'active' : ''}`}
+                    onClick={() => setRequirementsViewMode('accordion')}
+                  >
+                    <span>📱</span> Accordion Cards
+                  </button>
+                </div>
+              </div>
+
+              {/* SEARCH / QUICK ADD PRODUCTS AUTOCOMPLETE BAR */}
+              <div className="quick-add-container">
+                <div className="quick-add-input-wrapper">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }}>
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input
+                    type="text"
+                    className="quick-add-input"
+                    placeholder="Quick search products to append to requirements list..."
+                    value={searchProductQuery}
+                    onChange={e => setSearchProductQuery(e.target.value)}
+                  />
+                </div>
+                
+                {filteredProducts.length > 0 && (
+                  <div className="autocomplete-dropdown">
+                    {filteredProducts.map((prod, idx) => (
+                      <div
+                        key={idx}
+                        className="autocomplete-item"
+                        onClick={() => handleSelectProductToAdd(prod)}
+                      >
+                        ➕ {prod}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {searchProductQuery.trim() !== '' && filteredProducts.length === 0 && (
+                  <div className="autocomplete-dropdown">
+                    <div
+                      className="autocomplete-item"
+                      onClick={() => handleSelectProductToAdd(searchProductQuery.trim())}
+                    >
+                      ➕ Create custom item: "{searchProductQuery.trim()}"
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* OPTION 1: SPREADSHEET TABLE */}
+              {requirementsViewMode === 'table' && (
+                <div className="edit-table-wrapper">
+                  <table className="edit-table-requirements">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '40%' }}>Product Name</th>
+                        <th style={{ width: '20%' }}>Quantity</th>
+                        <th style={{ width: '20%' }}>Rate (₹)</th>
+                        <th style={{ width: '15%' }}>Amount (₹)</th>
+                        <th style={{ width: '5%', textAlign: 'center' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editItems.map((item, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <input
+                              type="text"
+                              className="ag-input-futuristic"
+                              style={{ padding: '6px 10px' }}
+                              value={item.productName}
+                              onChange={e => handleEditItemChange(idx, 'productName', e.target.value)}
+                              placeholder="e.g. 18mm Plywood"
+                              list="common-products"
+                              required
+                            />
+                          </td>
+                          <td>
+                            <div className="qty-adjuster">
+                              <button
+                                type="button"
+                                className="qty-adjuster-btn"
+                                onClick={() => {
+                                  const current = parseFloat(item.qty) || 0;
+                                  if (current > 1) {
+                                    handleEditItemChange(idx, 'qty', current - 1);
+                                  }
+                                }}
+                              >
+                                −
+                              </button>
+                              <input
+                                type="number"
+                                className="qty-adjuster-input"
+                                value={item.qty}
+                                min="0.01"
+                                step="any"
+                                onChange={e => handleEditItemChange(idx, 'qty', parseFloat(e.target.value) || 0)}
+                                required
+                              />
+                              <button
+                                type="button"
+                                className="qty-adjuster-btn"
+                                onClick={() => {
+                                  const current = parseFloat(item.qty) || 0;
+                                  handleEditItemChange(idx, 'qty', current + 1);
+                                }}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="ag-input-futuristic"
+                              style={{ padding: '6px 10px' }}
+                              value={item.rate}
+                              min="0"
+                              step="any"
+                              onChange={e => handleEditItemChange(idx, 'rate', parseFloat(e.target.value) || 0)}
+                              required
+                            />
+                          </td>
+                          <td style={{ fontWeight: '700', color: 'var(--accent)', fontSize: '13px' }}>
+                            ₹{(parseFloat(item.total) || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleEditDeleteRow(idx)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--status-red)',
+                                fontSize: '16px',
+                                cursor: 'pointer',
+                                padding: '4px'
+                              }}
+                              title="Delete Item"
+                            >
+                              &times;
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* OPTION 2: ACCORDION CARD DECK */}
+              {requirementsViewMode === 'accordion' && (
+                <div className="accordion-items-container">
+                  {editItems.map((item, idx) => {
+                    const isExpanded = !!expandedItems[idx];
+                    return (
+                      <div key={idx} className={`accordion-item-card ${isExpanded ? 'expanded' : ''}`}>
+                        
+                        {/* Header bar initially showing summary */}
+                        <div className="accordion-item-header" onClick={() => toggleItemExpanded(idx)}>
+                          <div className="accordion-item-title">
+                            <span style={{ color: 'var(--accent)' }}>📦 #{idx + 1}</span>
+                            <span style={{ fontWeight: '700' }}>{item.productName || '(Empty Item)'}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                              • Qty {item.qty} {item.unit || 'Sheets'} • ₹{(parseFloat(item.rate) || 0).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontWeight: '800', color: 'var(--text-white)', fontSize: '12.5px' }}>
+                              ₹{(parseFloat(item.total) || 0).toLocaleString('en-IN')}
+                            </span>
+                            <span className="accordion-item-chevron">▼</span>
+                          </div>
+                        </div>
+
+                        {/* Expandable form inputs */}
+                        {isExpanded && (
+                          <div className="accordion-item-content">
+                            
+                            {/* Product Name */}
+                            <div className="field-span-full">
+                              <label className="ag-form-label">Product / Material Description</label>
+                              <input
+                                type="text"
+                                className="ag-input-futuristic"
+                                value={item.productName}
+                                onChange={e => handleEditItemChange(idx, 'productName', e.target.value)}
+                                list="common-products"
+                                placeholder="Product description"
+                                required
+                              />
+                            </div>
+
+                            {/* Category dropdown */}
+                            <div>
+                              <label className="ag-form-label">Category</label>
+                              <select
+                                className="ag-select-futuristic"
+                                value={item.category || 'Material'}
+                                onChange={e => handleEditItemChange(idx, 'category', e.target.value)}
+                              >
+                                <option value="Material">Material</option>
+                                <option value="Installation">Installation</option>
+                                <option value="Automation">Automation</option>
+                                <option value="Labor">Labor</option>
+                                <option value="Miscellaneous">Miscellaneous</option>
+                              </select>
+                            </div>
+
+                            {/* Status dropdown */}
+                            <div>
+                              <label className="ag-form-label">Status</label>
+                              <select
+                                className="ag-select-futuristic"
+                                value={item.status || 'Pending'}
+                                onChange={e => handleEditItemChange(idx, 'status', e.target.value)}
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Installed">Installed</option>
+                              </select>
+                            </div>
+
+                            {/* Unit dropdown */}
+                            <div>
+                              <label className="ag-form-label">Unit</label>
+                              <select
+                                className="ag-select-futuristic"
+                                value={item.unit}
+                                onChange={e => handleEditItemChange(idx, 'unit', e.target.value)}
+                              >
+                                <option value="Sheets">Sheets</option>
+                                <option value="Sets">Sets</option>
+                                <option value="Pcs">Pcs</option>
+                                <option value="Boxes">Boxes</option>
+                                <option value="Kgs">Kgs</option>
+                                <option value="Bags">Bags</option>
+                                <option value="Rft">Rft</option>
+                                <option value="Lot">Lot</option>
+                              </select>
+                            </div>
+
+                            {/* Quantity Adjuster */}
+                            <div>
+                              <label className="ag-form-label">Quantity</label>
+                              <div className="qty-adjuster" style={{ maxWidth: '100%' }}>
+                                <button
+                                  type="button"
+                                  className="qty-adjuster-btn"
+                                  onClick={() => {
+                                    const current = parseFloat(item.qty) || 0;
+                                    if (current > 1) handleEditItemChange(idx, 'qty', current - 1);
+                                  }}
+                                >
+                                  −
+                                </button>
+                                <input
+                                  type="number"
+                                  className="qty-adjuster-input"
+                                  value={item.qty}
+                                  onChange={e => handleEditItemChange(idx, 'qty', parseFloat(e.target.value) || 0)}
+                                  required
+                                />
+                                <button
+                                  type="button"
+                                  className="qty-adjuster-btn"
+                                  onClick={() => {
+                                    const current = parseFloat(item.qty) || 0;
+                                    handleEditItemChange(idx, 'qty', current + 1);
+                                  }}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Rate input */}
+                            <div>
+                              <label className="ag-form-label">Rate / Unit Price (₹)</label>
+                              <input
+                                type="number"
+                                className="ag-input-futuristic"
+                                value={item.rate}
+                                onChange={e => handleEditItemChange(idx, 'rate', parseFloat(e.target.value) || 0)}
+                                required
+                              />
+                            </div>
+
+                            {/* Total amount display */}
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                              <label className="ag-form-label">Calculated Amount</label>
+                              <span style={{ fontWeight: '800', fontSize: '15px', color: 'var(--accent)' }}>
+                                ₹{(parseFloat(item.total) || 0).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+
+                            {/* Card actions */}
+                            <div className="field-span-full" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => handleEditDuplicateRow(idx)}
+                                style={{ display: 'flex', gap: '4px', alignItems: 'center' }}
+                              >
+                                📋 Duplicate
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm"
+                                onClick={() => handleEditDeleteRow(idx)}
+                                style={{ display: 'flex', gap: '4px', alignItems: 'center' }}
+                              >
+                                🗑️ Delete Item
+                              </button>
+                            </div>
+
+                          </div>
+                        )}
+
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Add row button at bottom */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleEditAddRow}
+                  style={{ fontWeight: '700', padding: '8px 16px' }}
+                >
+                  ➕ Add Item Module
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          {/* RIGHT SECTION (30%): Sticky Payment Card + Notes + Timeline */}
+          <div>
+            
+            {/* Sticky Sidebar container */}
+            <div className="sticky-sidebar-premium">
+              
+              {/* Sticky Card 1: Payment Summary */}
+              <div className="glass-card-premium" style={{ borderColor: 'rgba(212, 166, 79, 0.2)' }}>
+                <div className="glass-card-title-premium">
+                  <span>Billing Workspace</span>
+                  <span style={{ fontSize: '10px', color: 'var(--accent)' }}>REAL-TIME</span>
+                </div>
+
+                {/* LARGE PAYMENT STATUS BADGE */}
+                <div className={`premium-status-banner ${paymentStatusClass}`}>
+                  {paymentStatusText}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  
+                  {/* Total Purchased (Read-only) */}
+                  <div className="floating-group">
+                    <input
+                      type="text"
+                      id="edit-total-purchased"
+                      className="floating-input"
+                      style={{ background: 'rgba(16, 23, 38, 0.4)', opacity: 0.8, cursor: 'not-allowed' }}
+                      value={`₹${editSubtotal.toLocaleString('en-IN')}`}
+                      placeholder=" "
+                      readOnly
+                    />
+                    <label htmlFor="edit-total-purchased" className="floating-label">Total Purchased (Auto)</label>
+                  </div>
+
+                  {/* GST Dropdown */}
+                  <div className="floating-group">
+                    <select
+                      id="edit-tax"
+                      className="floating-select"
+                      value={editTaxPercent}
+                      onChange={e => setEditTaxPercent(e.target.value)}
+                    >
+                      <option value="0">0% (Nil)</option>
+                      <option value="5">5% GST</option>
+                      <option value="12">12% GST</option>
+                      <option value="18">18% GST (Std)</option>
+                      <option value="28">28% GST</option>
+                    </select>
+                    <label htmlFor="edit-tax" className="floating-select-label">GST / Tax Rate</label>
+                  </div>
+
+                  {/* Discount input */}
+                  <div className="floating-group">
+                    <input
+                      type="number"
+                      id="edit-discount"
+                      className="floating-input"
+                      value={editDiscount}
+                      onChange={e => setEditDiscount(e.target.value)}
+                      placeholder=" "
+                      min="0"
+                    />
+                    <label htmlFor="edit-discount" className="floating-label">Discount Given (₹)</label>
+                  </div>
+
+                  {/* Final Bill banner */}
+                  <div style={{
+                    background: 'rgba(11, 17, 32, 0.6)',
+                    border: '1px solid rgba(212, 166, 79, 0.1)',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Final Bill Amount</span>
+                    <strong style={{ fontSize: '20px', color: 'var(--accent)', marginTop: '4px' }}>
+                      ₹{finalBillValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </strong>
+                    <span style={{ fontSize: '9px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '2px' }}>
+                      (₹{editSubtotal.toLocaleString('en-IN')} subtotal − ₹{editDiscountVal.toLocaleString('en-IN')} discount + ₹{editTaxAmount.toLocaleString('en-IN')} GST)
+                    </span>
+                  </div>
+
+                  {/* Advance Paid input */}
+                  <div className="floating-group">
+                    <input
+                      type="number"
+                      id="edit-advance"
+                      className="floating-input"
+                      value={editAdvancePaid}
+                      onChange={e => setEditAdvancePaid(e.target.value)}
+                      placeholder=" "
+                      min="0"
+                    />
+                    <label htmlFor="edit-advance" className="floating-label">Total Advance Paid (₹)</label>
+                  </div>
+
+                  {/* Balance Due banner */}
+                  <div style={{
+                    background: 'rgba(11, 17, 32, 0.6)',
+                    border: '1px solid rgba(239, 68, 68, 0.1)',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>Balance Outstanding:</span>
+                    <strong style={{ fontSize: '16px', color: balanceDueValue > 0 ? 'var(--status-red)' : 'var(--status-green)' }}>
+                      ₹{balanceDueValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </strong>
+                  </div>
+
+                  {/* Payment Mode & Due Date */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                    <div className="floating-group">
+                      <select
+                        id="edit-paymode"
+                        className="floating-select"
+                        value={editPaymentMode}
+                        onChange={e => setEditPaymentMode(e.target.value)}
+                      >
+                        <option value="Cash">💵 Cash</option>
+                        <option value="GPay">📱 GPay / UPI</option>
+                        <option value="Bank Transfer">🏦 Bank Transfer</option>
+                        <option value="Cheque">✍️ Cheque</option>
+                      </select>
+                      <label htmlFor="edit-paymode" className="floating-select-label">Payment Mode</label>
+                    </div>
+                    <div className="floating-group">
+                      <input
+                        type="date"
+                        id="edit-duedate"
+                        className="floating-input"
+                        value={editDueDate}
+                        onChange={e => setEditDueDate(e.target.value)}
+                        placeholder=" "
+                      />
+                      <label htmlFor="edit-duedate" className="floating-label">Due Date</label>
+                    </div>
+                  </div>
+
+                  {/* Payment Notes */}
+                  <div className="floating-group">
+                    <input
+                      type="text"
+                      id="edit-paynotes"
+                      className="floating-input"
+                      value={editPaymentNotes}
+                      onChange={e => setEditPaymentNotes(e.target.value)}
+                      placeholder=" "
+                    />
+                    <label htmlFor="edit-paynotes" className="floating-label">Payment Remarks</label>
+                  </div>
+
+                  {/* RECORD COLLECTION LEDGER BUTTON */}
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ width: '100%', padding: '10px', fontWeight: '700', display: 'flex', justifyContent: 'center', gap: '6px' }}
+                    onClick={() => setIsQuickCollectOpen(!isQuickCollectOpen)}
+                  >
+                    🪙 Quick Payment Collection
+                  </button>
+
+                  {/* QUICK COLLECTION POPUP */}
+                  {isQuickCollectOpen && (
+                    <div style={{
+                      background: 'rgba(11, 17, 32, 0.9)',
+                      border: '1px solid rgba(212, 166, 79, 0.3)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      marginTop: '4px',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.5)',
+                      animation: 'fadeIn 0.2s ease'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent)' }}>RECORD INSTALLMENT COLLECTION</span>
+                        <button type="button" onClick={() => setIsQuickCollectOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '14px', cursor: 'pointer' }}>&times;</button>
+                      </div>
+                      <form onSubmit={handleQuickCollectSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <input
+                          type="number"
+                          placeholder="Amount Collected (₹)"
+                          className="ag-input-futuristic"
+                          value={quickCollectAmount}
+                          onChange={e => setQuickCollectAmount(e.target.value)}
+                          required
+                          min="1"
+                        />
+                        <select
+                          className="ag-select-futuristic"
+                          value={quickCollectMode}
+                          onChange={e => setQuickCollectMode(e.target.value)}
+                        >
+                          <option value="Cash">💵 Cash</option>
+                          <option value="GPay">📱 GPay / UPI</option>
+                          <option value="Bank Transfer">🏦 Bank Transfer</option>
+                          <option value="Cheque">✍️ Cheque</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Installment payment description..."
+                          className="ag-input-futuristic"
+                          value={quickCollectNotes}
+                          onChange={e => setQuickCollectNotes(e.target.value)}
+                        />
+                        <button type="submit" className="btn btn-primary btn-sm" style={{ width: '100%', height: '32px', color: '#000', fontWeight: '800' }}>
+                          Submit Ledger Collection
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Collection ledger list inside sidebar card */}
+                  {customerPayments.length > 0 && (
+                    <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.06)' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Recent Collections</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px', maxHeight: '100px', overflowY: 'auto' }}>
+                        {customerPayments.slice(-3).map(p => (
+                          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', background: 'rgba(11,17,32,0.3)', padding: '5px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <strong style={{ color: 'var(--status-green)' }}>₹{p.amountPaid} via {p.paymentMode}</strong>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '9.5px' }}>{p.note || 'Collection'}</span>
+                            </div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '9.5px', alignSelf: 'center' }}>
+                              {new Date(p.timestamp).toLocaleDateString('en-IN')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+
+              {/* Sticky Card 2: Inline Notes Panel */}
+              <div className="glass-card-premium">
+                <div className="glass-card-title-premium">
+                  <span>Client Notes</span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{customerNotes.length} TOTAL</span>
+                </div>
+                <form onSubmit={handleAddNoteSubmit} style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+                  <input
+                    type="text"
+                    className="ag-input-futuristic"
+                    placeholder="Log a client note inline..."
+                    value={noteInput}
+                    onChange={e => setNoteInput(e.target.value)}
+                    required
+                    style={{ flex: 1 }}
+                  />
+                  <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '0 12px', height: '36px', color: '#000' }}>Add</button>
+                </form>
+                <div className="inline-notes-feed">
+                  {customerNotes.length === 0 ? (
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No notes logged yet.</span>
+                  ) : (
+                    customerNotes.slice().reverse().map(n => (
+                      <div key={n.id} style={{ background: 'rgba(11,17,32,0.3)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: 'var(--accent)', marginBottom: '3px', fontWeight: '700' }}>
+                          <span>{n.addedBy}</span>
+                          <span style={{ color: 'var(--text-muted)' }}>{new Date(n.timestamp).toLocaleDateString('en-IN')}</span>
+                        </div>
+                        <p style={{ fontSize: '11.5px', color: 'var(--text-white)', margin: 0, lineHeight: 1.4 }}>{n.noteText}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Sticky Card 3: Visual Timeline (Compact) */}
+              <div className="glass-card-premium">
+                <div className="glass-card-title-premium">
+                  <span>Recent Logs</span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>TIMELINE</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                  {customerUserActivities.length === 0 ? (
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No activity records found.</span>
+                  ) : (
+                    customerUserActivities.slice(0, 5).map((act, index) => {
+                      const user = (crmUsers || []).find(u => u.id === act.userId) || { fullName: 'Staff', activityColor: '#D4A64F' };
+                      return (
+                        <div key={act.id || index} style={{ display: 'flex', gap: '8px', fontSize: '11.5px', borderBottom: '1px solid rgba(255,255,255,0.02)', paddingBottom: '6px' }}>
+                          <div style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            backgroundColor: user.activityColor,
+                            color: '#000',
+                            fontSize: '8px',
+                            fontWeight: '800',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            {user.fullName.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ color: 'var(--text-white)', fontWeight: '600' }}>
+                              <span style={{ color: 'var(--accent)' }}>{user.fullName}</span> {act.activityDescription}
+                            </span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '9px', marginTop: '2px' }}>
+                              {new Date(act.createdAt).toLocaleDateString('en-IN')} {new Date(act.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* STICKY FOOTER ACTION BAR */}
+        <div className="sticky-footer-bar">
+          <div className="sticky-footer-content">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <strong style={{ fontSize: '13px', color: 'var(--text-white)' }}>Editing: {customer.customerName}</strong>
+                <span style={{ fontSize: '11px', color: 'var(--accent)' }}>Unsaved changes exist</span>
+              </div>
+            </div>
+            <div className="sticky-footer-actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => { localStorage.removeItem(`crm_draft_${customerId}`); setIsEditing(false); }}
+              >
+                Cancel
+              </button>
+              
+              {customer.phone && (
+                <a
+                  href={`https://wa.me/${customer.phone.replace(/[^0-9+]/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'flex', gap: '4px', alignItems: 'center', borderColor: '#25D366', color: '#25D366' }}
+                  onClick={() => logWhatsAppOpened(customer.id)}
+                >
+                  💬 WhatsApp
+                </a>
+              )}
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setIsPDFPreviewOpen(true)}
+              >
+                📄 Preview PDF
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-primary btn-sm btn-save"
+                style={{ backgroundColor: 'var(--accent)', color: '#000', fontWeight: '800', border: 'none', boxShadow: '0 0 15px rgba(212, 166, 79, 0.4)' }}
+                onClick={handleEditInfoSubmit}
+              >
+                Save Changes 💾
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* HEADER SECTION: Back buttons, metadata badges, quick contact triggers */}
@@ -527,7 +1564,8 @@ export default function CustomerDetail({ customerId, onBack }) {
               setEditDiscount(customer.discount !== undefined ? customer.discount : '');
               setEditTaxPercent(customer.taxPercent !== undefined ? customer.taxPercent.toString() : '18');
               setEditAdvancePaid(customer.advancePaid !== undefined ? customer.advancePaid : '');
-              setIsEditInfoOpen(true);
+              setEditStage(customer.stage || 'New Lead');
+              setIsEditing(true);
             }}
           >
             ✎ Edit
