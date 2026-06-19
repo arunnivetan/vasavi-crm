@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCRMDatabase } from '../context/CRMDatabaseContext';
+import svpLogo from '../assets/svp-logo.png';
 import {
   generateCustomerProfilePDF,
   generateInvoicePDF,
@@ -3741,7 +3742,7 @@ export default function CustomerDetail({ customerId, onBack }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #dab920', paddingBottom: '20px', marginBottom: '20px' }}>
                   {/* LEFT: LOGO */}
                   <div style={{ flex: '1' }}>
-                    <img src="/src/assets/svp-logo.png" alt="SVP Logo" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
+                    <img src={svpLogo} alt="SVP Logo" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
                   </div>
                   
                   {/* CENTER: COMPANY DETAILS */}

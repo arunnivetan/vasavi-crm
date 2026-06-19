@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCRMDatabase } from '../context/CRMDatabaseContext';
+import svpLogo from '../assets/svp-logo.png';
 
 export default function LoginModal() {
   const { crmUsers, loginUser, registerOthersUser } = useCRMDatabase();
@@ -82,7 +83,7 @@ export default function LoginModal() {
         {/* Brand Credentials */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <img 
-            src="/src/assets/svp-logo.png" 
+            src={svpLogo} 
             alt="Sri Vasavi Logo" 
             style={{ width: '80px', height: '80px', objectFit: 'contain', margin: '0 auto 12px auto', display: 'block' }} 
           />

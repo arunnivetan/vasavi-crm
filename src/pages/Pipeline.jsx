@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCRMDatabase } from '../context/CRMDatabaseContext';
+import svpLogo from '../assets/svp-logo.png';
 
 export default function Pipeline({ onViewCustomer }) {
   const {
@@ -87,7 +88,7 @@ export default function Pipeline({ onViewCustomer }) {
       <div className="mobile-app-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '16px', paddingBottom: '0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/src/assets/svp-logo.png" alt="Logo" style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fff', padding: '2px' }} />
+            <img src={svpLogo} alt="Logo" style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fff', padding: '2px' }} />
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: '800', margin: '0', color: 'var(--text-white)' }}>Sri Vasavi Plywoods</h2>
               <p style={{ fontSize: '11px', margin: 0, color: 'var(--text-muted)' }}>Pipeline & Deals</p>
