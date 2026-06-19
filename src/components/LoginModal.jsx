@@ -81,9 +81,11 @@ export default function LoginModal() {
         
         {/* Brand Credentials */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div className="glass-login-logo">
-            <span>SVP</span>
-          </div>
+          <img 
+            src="/src/assets/svp-logo.png" 
+            alt="Sri Vasavi Logo" 
+            style={{ width: '80px', height: '80px', objectFit: 'contain', margin: '0 auto 12px auto', display: 'block' }} 
+          />
           <h2 style={{ fontSize: '20px', fontWeight: '800', fontFamily: 'var(--font-display)', color: '#fff', letterSpacing: '-0.5px', marginTop: '12px' }}>
             Sri Vasavi CRM
           </h2>
