@@ -71,6 +71,24 @@ export default function CustomerDetail({ customerId, onBack }) {
   const [showAutoSaveDot, setShowAutoSaveDot] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [editStage, setEditStage] = useState('');
+
+  // Responsive / Mobile layout states
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [mobileCustomerExpanded, setMobileCustomerExpanded] = useState(false);
+  const [mobileItemsExpanded, setMobileItemsExpanded] = useState(false);
+  const [mobilePaymentsExpanded, setMobilePaymentsExpanded] = useState(false);
+  const [mobileNotesExpanded, setMobileNotesExpanded] = useState(false);
+  const [mobileLogsExpanded, setMobileLogsExpanded] = useState(false);
+  const [billingExpanded, setBillingExpanded] = useState(false);
+  const [viewAllActivities, setViewAllActivities] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Modals / Overlay Form states
   const [isEditInfoOpen, setIsEditInfoOpen] = useState(false);
@@ -552,6 +570,766 @@ export default function CustomerDetail({ customerId, onBack }) {
       alert('Failed to record collection: ' + err.message);
     }
   };
+
+  if (isEditing && isMobile) {
+    const finalBillValue = editSubtotal - editDiscountVal + editTaxAmount;
+    const balanceDueValue = Math.max(0, finalBillValue - parseFloat(editAdvancePaid || 0));
+    
+    // Status color calculations
+    let paymentStatusText = 'Pending';
+    let paymentStatusClass = 'pending';
+    if (parseFloat(editAdvancePaid || 0) > 0) {
+      paymentStatusText = balanceDueValue <= 0 ? 'Paid' : 'Partial';
+      paymentStatusClass = balanceDueValue <= 0 ? 'paid' : 'partial';
+    }
+
+    // Filter products for autocomplete
+    const filteredProducts = COMMON_PRODUCTS.filter(prod => 
+      prod.toLowerCase().includes(searchProductQuery.toLowerCase()) &&
+      searchProductQuery.trim() !== ''
+    );
+
+    return (
+      <div className="mobile-crm-edit-container animate-slide-in">
+        {/* Header */}
+        <div className="mobile-edit-header">
+          <button 
+            type="button"
+            className="mobile-back-btn" 
+            onClick={() => { localStorage.removeItem(`crm_draft_${customerId}`); setIsEditing(false); }}
+          >
+            ← Back
+          </button>
+          <div className="mobile-header-title-section">
+            <h4 className="mobile-header-name">{editName || customer.customerName}</h4>
+            <span className="mobile-header-sub">{customer.svpReferenceNo || 'SVP-2026-001'}</span>
+          </div>
+          <div className="mobile-header-status-sec">
+            {showAutoSaveDot && (
+              <div className="mobile-draft-saved-indicator">
+                <span className="autosave-dot" style={{ position: 'static', display: 'inline-block' }}></span>
+                <span>Draft saved</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Draft Detected Banner */}
+        {hasDraft && (
+          <div className="mobile-draft-banner">
+            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-white)', marginBottom: '8px' }}>
+              ⚠️ Local draft found for this customer.
+            </span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={restoreDraft}>Restore Draft</button>
+              <button type="button" className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={discardDraft}>Discard</button>
+            </div>
+          </div>
+        )}
+
+        {/* Billing Summary Card */}
+        <div className="mobile-billing-summary-card">
+          <div className="mobile-billing-card-header">
+            <span className={`mobile-status-badge ${paymentStatusClass}`}>{paymentStatusText}</span>
+            <div className="mobile-billing-outstanding">
+              <span className="mobile-bill-label">Outstanding</span>
+              <div className="mobile-bill-value outstanding-val">₹{balanceDueValue.toLocaleString('en-IN')}</div>
+            </div>
+          </div>
+          <div className="mobile-billing-card-body">
+            <div className="mobile-billing-row-summary">
+              <div>
+                <span className="summary-lbl">Purchased:</span>
+                <span className="summary-val">₹{finalBillValue.toLocaleString('en-IN')}</span>
+              </div>
+              <div>
+                <span className="summary-lbl">Paid:</span>
+                <span className="summary-val status-green">₹{parseFloat(editAdvancePaid || 0).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            {/* If expanded, show advanced options */}
+            {billingExpanded && (
+              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="mobile-form-divider" />
+                
+                <div className="mobile-input-group">
+                  <label className="mobile-input-label">GST Tax (%)</label>
+                  <select 
+                    className="mobile-select"
+                    value={editTaxPercent}
+                    onChange={e => setEditTaxPercent(e.target.value)}
+                  >
+                    <option value="0">0% (GST Exempt)</option>
+                    <option value="5">5% GST</option>
+                    <option value="12">12% GST</option>
+                    <option value="18">18% GST</option>
+                    <option value="28">28% GST</option>
+                  </select>
+                </div>
+
+                <div className="mobile-input-group">
+                  <label className="mobile-input-label">Discount (₹)</label>
+                  <input 
+                    type="number" 
+                    className="mobile-input" 
+                    placeholder="Enter discount amount"
+                    value={editDiscount}
+                    onChange={e => setEditDiscount(e.target.value)}
+                  />
+                </div>
+
+                <div className="mobile-input-group">
+                  <label className="mobile-input-label">Due Date</label>
+                  <input 
+                    type="date" 
+                    className="mobile-input"
+                    value={editDueDate}
+                    onChange={e => setEditDueDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="mobile-input-group">
+                  <label className="mobile-input-label">Payment Mode</label>
+                  <select 
+                    className="mobile-select"
+                    value={editPaymentMode}
+                    onChange={e => setEditPaymentMode(e.target.value)}
+                  >
+                    <option value="Cash">Cash 💵</option>
+                    <option value="UPI">UPI/GPay 📱</option>
+                    <option value="Card">Card Swipe 💳</option>
+                    <option value="NetBanking">Net Banking 🏦</option>
+                    <option value="Cheque">Cheque 🎫</option>
+                  </select>
+                </div>
+
+                <div className="mobile-input-group">
+                  <label className="mobile-input-label">Billing Remarks</label>
+                  <textarea 
+                    className="mobile-input" 
+                    placeholder="Internal remarks..."
+                    rows="2"
+                    value={editPaymentNotes}
+                    onChange={e => setEditPaymentNotes(e.target.value)}
+                    style={{ resize: 'none' }}
+                  />
+                </div>
+
+                {/* Quick Collect */}
+                <div className="mobile-quick-collect-container">
+                  <button 
+                    type="button" 
+                    className="mobile-quick-collect-btn"
+                    onClick={() => setIsQuickCollectOpen(!isQuickCollectOpen)}
+                  >
+                    ⚡ Quick Payment Collection
+                  </button>
+                  {isQuickCollectOpen && (
+                    <div className="mobile-quick-collect-popup animate-slide-in">
+                      <form onSubmit={handleQuickCollectSubmit}>
+                        <div className="mobile-input-group">
+                          <label className="mobile-input-label">Amount collected (₹)</label>
+                          <input 
+                            type="number" 
+                            className="mobile-input"
+                            placeholder="e.g. 5000"
+                            value={quickCollectAmount}
+                            onChange={e => setQuickCollectAmount(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="mobile-input-group">
+                          <label className="mobile-input-label">Mode</label>
+                          <select 
+                            className="mobile-select"
+                            value={quickCollectMode}
+                            onChange={e => setQuickCollectMode(e.target.value)}
+                          >
+                            <option value="Cash">Cash 💵</option>
+                            <option value="UPI">UPI/GPay 📱</option>
+                            <option value="Card">Card Swipe 💳</option>
+                            <option value="NetBanking">Net Banking 🏦</option>
+                            <option value="Cheque">Cheque 🎫</option>
+                          </select>
+                        </div>
+                        <div className="mobile-input-group">
+                          <label className="mobile-input-label">Notes</label>
+                          <input 
+                            type="text" 
+                            className="mobile-input"
+                            placeholder="e.g. Part payment on account"
+                            value={quickCollectNotes}
+                            onChange={e => setQuickCollectNotes(e.target.value)}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                          <button type="submit" className="btn btn-primary btn-sm" style={{ flex: 1 }}>
+                            Record
+                          </button>
+                          <button type="button" className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => setIsQuickCollectOpen(false)}>
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+          </div>
+          <div className="mobile-billing-card-footer">
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>SVP Ref: {customer.svpReferenceNo || 'SVP-2026-001'}</span>
+            <button 
+              type="button" 
+              className="mobile-billing-expand-btn"
+              onClick={() => setBillingExpanded(!billingExpanded)}
+            >
+              {billingExpanded ? 'Hide Details ▲' : 'Show Details ▼'}
+            </button>
+          </div>
+        </div>
+
+        {/* Collapsible Accordions */}
+
+        {/* 1. Customer Information Accordion */}
+        <div className="mobile-accordion-card">
+          <button 
+            type="button"
+            className="mobile-accordion-trigger"
+            onClick={() => setMobileCustomerExpanded(!mobileCustomerExpanded)}
+          >
+            <span>👤 Customer Profile</span>
+            <span className="mobile-accordion-chevron">{mobileCustomerExpanded ? '▲' : '▼'}</span>
+          </button>
+          {mobileCustomerExpanded && (
+            <div className="mobile-accordion-content animate-slide-in">
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Customer Name</label>
+                <input 
+                  type="text"
+                  className="mobile-input"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Phone Number</label>
+                <input 
+                  type="tel"
+                  className="mobile-input"
+                  value={editPhone}
+                  onChange={e => setEditPhone(e.target.value)}
+                />
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Lead Stage</label>
+                <select 
+                  className="mobile-select"
+                  value={editStage}
+                  onChange={e => setEditStage(e.target.value)}
+                >
+                  {stages.map(stg => (
+                    <option key={stg.stageName} value={stg.stageName}>{stg.stageName}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Salesperson</label>
+                <select 
+                  className="mobile-select"
+                  value={editStaff}
+                  onChange={e => setEditStaff(e.target.value)}
+                >
+                  {staffList.map(stf => (
+                    <option key={stf} value={stf}>{stf}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Project Type</label>
+                <select 
+                  className="mobile-select"
+                  value={editProjType}
+                  onChange={e => setEditProjType(e.target.value)}
+                >
+                  <option value="Hardware">Hardware Supplies</option>
+                  <option value="Plywood">Plywood & Boarding</option>
+                  <option value="Laminate">Laminates & Veneers</option>
+                  <option value="Interior design">Interior Fit-out</option>
+                  <option value="Contractor Work">Contractor Billing</option>
+                </select>
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Priority</label>
+                <select 
+                  className="mobile-select"
+                  value={editPriority}
+                  onChange={e => setEditPriority(e.target.value)}
+                >
+                  <option value="High">🔴 High Priority</option>
+                  <option value="Medium">🟡 Medium Priority</option>
+                  <option value="Low">🟢 Low Priority</option>
+                </select>
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Delivery Site Address</label>
+                <textarea 
+                  className="mobile-input"
+                  value={editAddress}
+                  onChange={e => setEditAddress(e.target.value)}
+                  rows="2"
+                  style={{ resize: 'none' }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 2. Quotation Items Accordion */}
+        <div className="mobile-accordion-card">
+          <button 
+            type="button"
+            className="mobile-accordion-trigger"
+            onClick={() => setMobileItemsExpanded(!mobileItemsExpanded)}
+          >
+            <span>📦 Quotation Items ({editItems.length})</span>
+            <span className="mobile-accordion-chevron">{mobileItemsExpanded ? '▲' : '▼'}</span>
+          </button>
+          {mobileItemsExpanded && (
+            <div className="mobile-accordion-content animate-slide-in">
+              
+              <div className="mobile-quick-add-container">
+                <input 
+                  type="text" 
+                  className="mobile-quick-add-input"
+                  placeholder="Quick search products to append..."
+                  value={searchProductQuery}
+                  onChange={e => setSearchProductQuery(e.target.value)}
+                />
+                {filteredProducts.length > 0 && (
+                  <div className="mobile-autocomplete-dropdown">
+                    {filteredProducts.map((prod, idx) => (
+                      <div 
+                        key={idx} 
+                        className="mobile-autocomplete-item"
+                        onClick={() => handleSelectProductToAdd(prod)}
+                      >
+                        ➕ {prod}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {searchProductQuery.trim() !== '' && filteredProducts.length === 0 && (
+                  <div className="mobile-autocomplete-dropdown">
+                    <div 
+                      className="mobile-autocomplete-item"
+                      onClick={() => handleSelectProductToAdd(searchProductQuery.trim())}
+                    >
+                      ➕ Create custom item: "{searchProductQuery.trim()}"
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mobile-material-cards-list">
+                {editItems.map((item, idx) => {
+                  const isItemExpanded = !!expandedItems[idx];
+                  return (
+                    <div key={idx} className="mobile-material-card">
+                      <div 
+                        className="mobile-material-card-header" 
+                        onClick={() => {
+                          setExpandedItems(prev => ({ ...prev, [idx]: !prev[idx] }));
+                        }} 
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <span className="mobile-material-title">#{idx + 1} {item.productName || '(Empty Item)'}</span>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            ₹{(parseFloat(item.total) || 0).toLocaleString('en-IN')}
+                          </span>
+                          <span style={{ fontSize: '9px', color: 'var(--accent)' }}>{isItemExpanded ? '▲' : '▼'}</span>
+                        </div>
+                      </div>
+
+                      {isItemExpanded ? (
+                        <div className="mobile-material-card-fields animate-slide-in">
+                          <div className="mobile-card-span-full">
+                            <label className="mobile-card-lbl">Product Description</label>
+                            <input 
+                              type="text" 
+                              className="mobile-card-input"
+                              value={item.productName}
+                              onChange={e => handleEditItemChange(idx, 'productName', e.target.value)}
+                              placeholder="Product name"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mobile-card-lbl">Category</label>
+                            <select 
+                              className="mobile-card-select"
+                              value={item.category || 'Material'}
+                              onChange={e => handleEditItemChange(idx, 'category', e.target.value)}
+                            >
+                              <option value="Material">Material</option>
+                              <option value="Installation">Installation</option>
+                              <option value="Automation">Automation</option>
+                              <option value="Labor">Labor</option>
+                              <option value="Miscellaneous">Miscellaneous</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="mobile-card-lbl">Status</label>
+                            <select 
+                              className="mobile-card-select"
+                              value={item.status || 'Pending'}
+                              onChange={e => handleEditItemChange(idx, 'status', e.target.value)}
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="In Progress">In Progress</option>
+                              <option value="Completed">Completed</option>
+                              <option value="Installed">Installed</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="mobile-card-lbl">Unit</label>
+                            <select 
+                              className="mobile-card-select"
+                              value={item.unit || 'Sheets'}
+                              onChange={e => handleEditItemChange(idx, 'unit', e.target.value)}
+                            >
+                              <option value="Sheets">Sheets</option>
+                              <option value="Sets">Sets</option>
+                              <option value="Pcs">Pcs</option>
+                              <option value="Boxes">Boxes</option>
+                              <option value="Kgs">Kgs</option>
+                              <option value="Bags">Bags</option>
+                              <option value="Rft">Rft</option>
+                              <option value="Lot">Lot</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="mobile-card-lbl">Quantity</label>
+                            <div className="mobile-qty-adjuster">
+                              <button 
+                                type="button" 
+                                className="mobile-qty-btn"
+                                onClick={() => {
+                                  const current = parseFloat(item.qty) || 0;
+                                  if (current > 1) handleEditItemChange(idx, 'qty', current - 1);
+                                }}
+                              >
+                                −
+                              </button>
+                              <input 
+                                type="number" 
+                                className="mobile-qty-input"
+                                value={item.qty}
+                                onChange={e => handleEditItemChange(idx, 'qty', parseFloat(e.target.value) || 0)}
+                              />
+                              <button 
+                                type="button" 
+                                className="mobile-qty-btn"
+                                onClick={() => {
+                                  const current = parseFloat(item.qty) || 0;
+                                  handleEditItemChange(idx, 'qty', current + 1);
+                                }}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="mobile-card-lbl">Rate (₹)</label>
+                            <input 
+                              type="number" 
+                              className="mobile-card-input"
+                              value={item.rate}
+                              onChange={e => handleEditItemChange(idx, 'rate', parseFloat(e.target.value) || 0)}
+                            />
+                          </div>
+
+                          <div className="mobile-card-span-full" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', paddingTop: '8px', borderTop: '1px dashed rgba(255, 255, 255, 0.05)' }}>
+                            <button 
+                              type="button" 
+                              className="mobile-material-delete-btn"
+                              onClick={() => handleEditDeleteRow(idx)}
+                            >
+                              🗑️ Delete Item
+                            </button>
+                            <button 
+                              type="button" 
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => handleEditDuplicateRow(idx)}
+                              style={{ fontSize: '10.5px' }}
+                            >
+                              📋 Duplicate
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div 
+                          className="amount-section" 
+                          onClick={() => {
+                            setExpandedItems(prev => ({ ...prev, [idx]: true }));
+                          }} 
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <span className="amount-lbl">Qty: {item.qty} {item.unit || 'Sheets'} • Rate: ₹{(parseFloat(item.rate) || 0).toLocaleString('en-IN')}</span>
+                          <span className="amount-val">₹{(parseFloat(item.total) || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 3. Payment Details Accordion */}
+        <div className="mobile-accordion-card">
+          <button 
+            type="button"
+            className="mobile-accordion-trigger"
+            onClick={() => setMobilePaymentsExpanded(!mobilePaymentsExpanded)}
+          >
+            <span>💳 Payment Details</span>
+            <span className="mobile-accordion-chevron">{mobilePaymentsExpanded ? '▲' : '▼'}</span>
+          </button>
+          {mobilePaymentsExpanded && (
+            <div className="mobile-accordion-content animate-slide-in">
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Advance Paid (₹)</label>
+                <input 
+                  type="number" 
+                  className="mobile-input"
+                  value={editAdvancePaid}
+                  onChange={e => setEditAdvancePaid(e.target.value)}
+                />
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Payment Mode</label>
+                <select 
+                  className="mobile-select"
+                  value={editPaymentMode}
+                  onChange={e => setEditPaymentMode(e.target.value)}
+                >
+                  <option value="Cash">Cash 💵</option>
+                  <option value="UPI">UPI/GPay 📱</option>
+                  <option value="Card">Card Swipe 💳</option>
+                  <option value="NetBanking">Net Banking 🏦</option>
+                  <option value="Cheque">Cheque 🎫</option>
+                </select>
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Due Date</label>
+                <input 
+                  type="date" 
+                  className="mobile-input"
+                  value={editDueDate}
+                  onChange={e => setEditDueDate(e.target.value)}
+                />
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Discount (₹)</label>
+                <input 
+                  type="number" 
+                  className="mobile-input"
+                  value={editDiscount}
+                  onChange={e => setEditDiscount(e.target.value)}
+                />
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">GST Tax (%)</label>
+                <select 
+                  className="mobile-select"
+                  value={editTaxPercent}
+                  onChange={e => setEditTaxPercent(e.target.value)}
+                >
+                  <option value="0">0% (GST Exempt)</option>
+                  <option value="5">5% GST</option>
+                  <option value="12">12% GST</option>
+                  <option value="18">18% GST</option>
+                  <option value="28">28% GST</option>
+                </select>
+              </div>
+
+              <div className="mobile-input-group">
+                <label className="mobile-input-label">Billing Remarks</label>
+                <textarea 
+                  className="mobile-input"
+                  value={editPaymentNotes}
+                  onChange={e => setEditPaymentNotes(e.target.value)}
+                  rows="2"
+                  placeholder="Remarks..."
+                  style={{ resize: 'none' }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Client Notes Accordion */}
+        <div className="mobile-accordion-card">
+          <button 
+            type="button"
+            className="mobile-accordion-trigger"
+            onClick={() => setMobileNotesExpanded(!mobileNotesExpanded)}
+          >
+            <span>📝 Client Notes ({customerNotes.length})</span>
+            <span className="mobile-accordion-chevron">{mobileNotesExpanded ? '▲' : '▼'}</span>
+          </button>
+          {mobileNotesExpanded && (
+            <div className="mobile-accordion-content animate-slide-in">
+              <form onSubmit={handleAddNoteSubmit} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <input 
+                  type="text" 
+                  className="mobile-input" 
+                  placeholder="Log a client note inline..."
+                  value={noteInput}
+                  onChange={e => setNoteInput(e.target.value)}
+                  required
+                  style={{ flex: 1 }}
+                />
+                <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '0 12px', height: '36px', color: '#000' }}>Add</button>
+              </form>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                {customerNotes.length === 0 ? (
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No notes logged yet.</span>
+                ) : (
+                  customerNotes.slice().reverse().map(n => (
+                    <div key={n.id} style={{ background: 'rgba(11,17,32,0.3)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: 'var(--accent)', marginBottom: '3px', fontWeight: '700' }}>
+                        <span>{n.addedBy}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{new Date(n.timestamp).toLocaleDateString('en-IN')}</span>
+                      </div>
+                      <p style={{ fontSize: '11.5px', color: 'var(--text-white)', margin: 0, lineHeight: 1.4 }}>{n.noteText}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 5. Activity Timeline Accordion */}
+        <div className="mobile-accordion-card">
+          <button 
+            type="button"
+            className="mobile-accordion-trigger"
+            onClick={() => setMobileLogsExpanded(!mobileLogsExpanded)}
+          >
+            <span>🕒 Recent Logs</span>
+            <span className="mobile-accordion-chevron">{mobileLogsExpanded ? '▲' : '▼'}</span>
+          </button>
+          {mobileLogsExpanded && (
+            <div className="mobile-accordion-content animate-slide-in">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {customerUserActivities.length === 0 ? (
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No activity records found.</span>
+                ) : (
+                  (viewAllActivities ? customerUserActivities : customerUserActivities.slice(0, 3)).map((act, index) => {
+                    const user = (crmUsers || []).find(u => u.id === act.userId) || { fullName: 'Staff', activityColor: '#D4A64F' };
+                    return (
+                      <div key={act.id || index} style={{ display: 'flex', gap: '8px', fontSize: '11.5px', borderBottom: '1px solid rgba(255,255,255,0.02)', paddingBottom: '6px' }}>
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          backgroundColor: user.activityColor,
+                          color: '#000',
+                          fontSize: '8px',
+                          fontWeight: '800',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {user.fullName.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ color: 'var(--text-white)', fontWeight: '600' }}>
+                            <span style={{ color: 'var(--accent)' }}>{user.fullName}</span> {act.activityDescription}
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '9px', marginTop: '2px' }}>
+                            {new Date(act.createdAt).toLocaleDateString('en-IN')} {new Date(act.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                {customerUserActivities.length > 3 && (
+                  <button
+                    type="button"
+                    className="mobile-view-all-btn"
+                    onClick={() => setViewAllActivities(!viewAllActivities)}
+                  >
+                    {viewAllActivities ? 'Show Less ▲' : 'View All Activities ▼'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Floating Add Material Button */}
+        <div className="mobile-floating-add-container">
+          <button 
+            type="button" 
+            className="mobile-floating-add-btn"
+            onClick={handleEditAddRow}
+          >
+            ➕ Add Material
+          </button>
+        </div>
+
+        {/* Sticky Save Action Bar */}
+        <div className="mobile-sticky-save-bar">
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <strong style={{ fontSize: '11px', color: 'var(--text-white)' }}>{editItems.length} Items</strong>
+            <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '700' }}>₹{editGrandTotal.toLocaleString('en-IN')}</span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setIsPDFPreviewOpen(true)}
+            >
+              📄 PDF
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              style={{ backgroundColor: 'var(--accent)', color: '#000', fontWeight: '800', border: 'none' }}
+              onClick={handleEditInfoSubmit}
+            >
+              Save Changes 💾
+            </button>
+          </div>
+        </div>
+
+      </div>
+    );
+  }
 
   if (isEditing) {
     // Render the premium edit customer workspace
