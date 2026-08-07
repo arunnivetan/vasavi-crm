@@ -189,6 +189,9 @@ export default function LoginModal() {
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </button>
             </div>
+            <span style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.4)', marginTop: '5px', display: 'block' }}>
+              Default Security Key: <strong style={{ color: '#D4A64F' }}>suresh</strong>
+            </span>
           </div>
 
           {/* Errors overlay */}

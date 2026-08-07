@@ -21,13 +21,33 @@ export const CRMDatabaseProvider = ({ children }) => {
   const [stages, setStages] = useState([]);
   const [bills, setBills] = useState([]);
 
+  // Default profile when authentication is disabled
+  const DEFAULT_USER = {
+    id: 'admin_default_id',
+    userCode: 'arun',
+    fullName: 'R S ARUN NIVETAN',
+    role: 'Admin',
+    activityColor: '#3B82F6',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    isActive: true
+  };
+
   // CRM Users & Activities audit logs state
   const [crmUsers, setCRMUsers] = useState([]);
   const [crmUserActivities, setCRMUserActivities] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('svp_crm_active_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return DEFAULT_USER;
+  });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [activeStaff, setActiveStaff] = useState('Suresh'); // Default selected staff member
+  const [activeStaff, setActiveStaff] = useState('R S ARUN NIVETAN');
 
   // List of available staff members for dropdown selectors
   const staffList = ['Suresh', 'Suresh babu', 'Ravi', 'Arun', 'Admin'];
@@ -133,6 +153,9 @@ export const CRMDatabaseProvider = ({ children }) => {
       } catch (e) {
         console.error('[CRM Context] Failed to restore session:', e);
       }
+    } else {
+      setCurrentUser(DEFAULT_USER);
+      setActiveStaff(DEFAULT_USER.fullName);
     }
     refreshDatabase();
   }, []);
@@ -745,10 +768,49 @@ export const CRMDatabaseProvider = ({ children }) => {
   const loginUser = async (userCode, password) => {
     try {
       setIsLoading(true);
-      const freshUsers = await databaseService.fetchCRMUsers();
-      setCRMUsers(freshUsers);
+      let freshUsers = [];
+      try {
+        freshUsers = await databaseService.fetchCRMUsers();
+        setCRMUsers(freshUsers || []);
+      } catch (e) {
+        console.warn('[CRM Context] Failed to fetch CRM users:', e);
+      }
 
-      const matched = freshUsers.find(u => u.userCode === userCode.toLowerCase());
+      let matched = freshUsers ? freshUsers.find(u => u.userCode === userCode.toLowerCase()) : null;
+
+      if (!matched) {
+        // Auto-create / seed predefined profile if it's one of the default profiles
+        const predefinedMap = {
+          'suresh': { name: 'R SURESH BABU', color: '#D4A64F', role: 'Admin' },
+          'arun': { name: 'R S ARUN NIVETAN', color: '#3B82F6', role: 'Admin' },
+          'saranya': { name: 'S SARANYA', color: '#A855F7', role: 'Staff' },
+          'pratiksha': { name: 'R S PRATIKSHA', color: '#10B981', role: 'Staff' }
+        };
+
+        const defaultProfile = predefinedMap[userCode.toLowerCase()];
+        if (defaultProfile) {
+          const newUser = {
+            id: crypto.randomUUID(),
+            userCode: userCode.toLowerCase(),
+            fullName: defaultProfile.name,
+            role: defaultProfile.role,
+            tempPassword: 'suresh',
+            activityColor: defaultProfile.color,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isActive: true
+          };
+          try {
+            matched = await databaseService.createCRMUser(newUser);
+          } catch (createErr) {
+            console.warn('[CRM Context] Failed to save CRM user to database, using local profile object:', createErr);
+          }
+          if (!matched) {
+            matched = newUser;
+          }
+        }
+      }
+
       if (!matched) {
         throw new Error('User profile not found in database.');
       }
@@ -757,27 +819,32 @@ export const CRMDatabaseProvider = ({ children }) => {
         throw new Error('Incorrect password entered.');
       }
 
-      await databaseService.updateCRMUserLastLogin(matched.id);
+      try {
+        await databaseService.updateCRMUserLastLogin(matched.id);
+      } catch (e) {}
+
       localStorage.setItem('svp_crm_active_user', JSON.stringify(matched));
       setCurrentUser(matched);
       setActiveStaff(matched.fullName);
 
       // Log activity
-      const meta = getDeviceMetadata();
-      const newAct = {
-        id: crypto.randomUUID(),
-        userId: matched.id,
-        customerId: null,
-        activityType: 'Login',
-        activityDescription: `Staff ${matched.fullName} logged into CRM successfully.`,
-        moduleName: 'Authentication',
-        oldValue: null,
-        newValue: 'Session Active',
-        ipAddress: meta.ipAddress,
-        deviceInfo: meta.deviceInfo,
-        createdAt: new Date().toISOString()
-      };
-      await databaseService.logCRMActivity(newAct);
+      try {
+        const meta = getDeviceMetadata();
+        const newAct = {
+          id: crypto.randomUUID(),
+          userId: matched.id,
+          customerId: null,
+          activityType: 'Login',
+          activityDescription: `Staff ${matched.fullName} logged into CRM successfully.`,
+          moduleName: 'Authentication',
+          oldValue: null,
+          newValue: 'Session Active',
+          ipAddress: meta.ipAddress,
+          deviceInfo: meta.deviceInfo,
+          createdAt: new Date().toISOString()
+        };
+        await databaseService.logCRMActivity(newAct);
+      } catch (e) {}
 
       await refreshDatabase();
       return matched;
@@ -790,33 +857,26 @@ export const CRMDatabaseProvider = ({ children }) => {
   };
 
   const logoutUser = async () => {
-    if (!currentUser) return;
-    try {
-      const oldUser = currentUser;
+    localStorage.removeItem('svp_crm_active_user');
+    setCurrentUser(DEFAULT_USER);
+    setActiveStaff(DEFAULT_USER.fullName);
+    await refreshDatabase();
+  };
 
-      // Log activity
-      const meta = getDeviceMetadata();
-      const newAct = {
-        id: crypto.randomUUID(),
-        userId: oldUser.id,
-        customerId: null,
-        activityType: 'Logout',
-        activityDescription: `Staff ${oldUser.fullName} logged out of CRM.`,
-        moduleName: 'Authentication',
-        oldValue: 'Session Active',
-        newValue: 'Session Terminated',
-        ipAddress: meta.ipAddress,
-        deviceInfo: meta.deviceInfo,
-        createdAt: new Date().toISOString()
-      };
-      await databaseService.logCRMActivity(newAct);
-
-      localStorage.removeItem('svp_crm_active_user');
-      setCurrentUser(null);
-      await refreshDatabase();
-    } catch (err) {
-      console.error('[CRM Context] logoutUser Exception:', err);
-    }
+  const switchUser = (userObj) => {
+    const newUser = {
+      id: userObj.id || crypto.randomUUID(),
+      userCode: userObj.code || userObj.userCode || 'user',
+      fullName: userObj.name || userObj.fullName,
+      role: userObj.role || 'Staff',
+      activityColor: userObj.color || userObj.activityColor || '#3B82F6',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isActive: true
+    };
+    localStorage.setItem('svp_crm_active_user', JSON.stringify(newUser));
+    setCurrentUser(newUser);
+    setActiveStaff(newUser.fullName);
   };
 
   const registerOthersUser = async (fullName) => {
@@ -1107,6 +1167,7 @@ export const CRMDatabaseProvider = ({ children }) => {
       crmUsers,
       crmUserActivities,
       currentUser,
+      switchUser,
       loginUser,
       logoutUser,
       registerOthersUser,

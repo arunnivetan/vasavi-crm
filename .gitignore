@@ -30,3 +30,4 @@ dist-ssr
 api.env
 
 .vercel
+.env*

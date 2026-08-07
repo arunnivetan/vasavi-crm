@@ -52,7 +52,7 @@ function AppContent() {
     setShowInstallBanner(false);
   };
 
-  const { currentUser, logoutUser } = useCRMDatabase();
+  const { currentUser, switchUser } = useCRMDatabase();
 
   const handleViewCustomer = (customerId) => {
     setSelectedCustomerId(customerId);
@@ -64,16 +64,26 @@ function AppContent() {
     setCurrentView('dashboard');
   };
 
-  // Require Login Modal
-  if (!currentUser) {
-    return <LoginModal />;
-  }
+  // Safe fallback if currentUser is still loading
+  const activeUser = currentUser || {
+    userCode: 'arun',
+    fullName: 'R S ARUN NIVETAN',
+    role: 'Admin',
+    activityColor: '#3B82F6'
+  };
+
+  const predefinedProfiles = [
+    { code: 'arun', name: 'R S ARUN NIVETAN', role: 'Admin', color: '#3B82F6' },
+    { code: 'suresh', name: 'R SURESH BABU', role: 'Admin', color: '#D4A64F' },
+    { code: 'saranya', name: 'S SARANYA', role: 'Staff', color: '#A855F7' },
+    { code: 'pratiksha', name: 'R S PRATIKSHA', role: 'Staff', color: '#10B981' }
+  ];
 
   return (
-    <div class="app-container">
+    <div className="app-container">
       {/* GLOBAL BRAND HEADER & STAFF PROFILE CARD */}
-      <header class="header-bar">
-        <div class="brand-section">
+      <header className="header-bar">
+        <div className="brand-section">
           <div className="brand-logo" style={{ width: '44px', height: '44px', flexShrink: 0, background: 'none', boxShadow: 'none' }}>
             <svg viewBox="0 0 100 100" width="100%" height="100%">
               <circle cx="50" cy="50" r="48" fill="#0B1120" />
@@ -86,18 +96,18 @@ function AppContent() {
                 </textPath>
               </text>
               <text fill="#94A3B8" fontSize="5.5" fontFamily="'Inter', sans-serif" fontWeight="600" letterSpacing="1">
-                <textPath href="#bottom-text-path" startOffset="50%" text-anchor="middle">
+                <textPath href="#bottom-text-path" startOffset="50%" textAnchor="middle">
                   SINCE 1997
                 </textPath>
               </text>
-              <text x="50" y="58" fill="#D4A64F" fontSize="22" fontFamily="'Sora', 'Georgia', serif" fontWeight="800" text-anchor="middle">
+              <text x="50" y="58" fill="#D4A64F" fontSize="22" fontFamily="'Sora', 'Georgia', serif" fontWeight="800" textAnchor="middle">
                 SVP
               </text>
               <path d="M 32 75 Q 50 82 68 75 M 36 78 Q 50 85 64 78" fill="none" stroke="#D4A64F" strokeWidth="0.8" opacity="0.6" />
             </svg>
           </div>
           <div>
-            <h1 class="brand-name" style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-white)' }}>SRI VASAVI PLYWOODS</h1>
+            <h1 className="brand-name" style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-white)' }}>SRI VASAVI PLYWOODS</h1>
             <span style={{ fontSize: '10px', color: 'var(--accent)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               GLASSWARES & HARDWARES
             </span>
@@ -105,19 +115,19 @@ function AppContent() {
         </div>
 
         {/* Executive Staff Profile Swapper */}
-        <div class="user-avatar-selector" style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setShowProfileDropdown(!showProfileDropdown)}>
+        <div className="user-avatar-selector" style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setShowProfileDropdown(!showProfileDropdown)}>
           <div 
-            class="staff-avatar" 
-            title={`Logged in as ${currentUser.fullName}`}
+            className="staff-avatar" 
+            title={`Active Profile: ${activeUser.fullName}`}
             style={{ 
-              background: currentUser.activityColor || 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
-              border: `2px solid ${currentUser.activityColor || 'var(--border-hover)'}`
+              background: activeUser.activityColor || 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
+              border: `2px solid ${activeUser.activityColor || 'var(--border-hover)'}`
             }}
           >
-            {currentUser.fullName.substring(0, 2).toUpperCase()}
+            {activeUser.fullName.substring(0, 2).toUpperCase()}
           </div>
           <span style={{ fontSize: '13px', color: 'var(--text-white)', fontWeight: '600' }} className="mobile-hidden">
-            {currentUser.fullName.split(' ')[currentUser.fullName.split(' ').length - 1]}
+            {activeUser.fullName.split(' ')[activeUser.fullName.split(' ').length - 1]}
           </span>
           <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>▼</span>
 
@@ -132,36 +142,46 @@ function AppContent() {
                 borderRadius: '12px',
                 boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
                 padding: '12px',
-                width: '190px',
+                width: '210px',
                 zIndex: 9999,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px'
+                gap: '6px'
               }}
               onClick={e => e.stopPropagation()}
             >
               <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Profile Representative
+                Switch Active Staff Profile
               </div>
-              <div style={{ fontWeight: '800', fontSize: '13px', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {currentUser.fullName}
-              </div>
-              <div style={{ fontSize: '10px', color: currentUser.activityColor, fontWeight: '700' }}>
-                Role: {currentUser.role || 'Staff'}
-              </div>
-              
-              <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '4px 0' }} />
-              
-              <button 
-                onClick={() => {
-                  logoutUser();
-                  setShowProfileDropdown(false);
-                }}
-                className="btn btn-danger btn-sm"
-                style={{ width: '100%', padding: '6px', justifyContent: 'center', fontWeight: '700' }}
-              >
-                Logout 📴
-              </button>
+
+              {predefinedProfiles.map(p => (
+                <button
+                  key={p.code}
+                  type="button"
+                  onClick={() => {
+                    switchUser(p);
+                    setShowProfileDropdown(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    background: activeUser.userCode === p.code ? 'rgba(212, 166, 79, 0.15)' : 'rgba(255,255,255,0.03)',
+                    border: activeUser.userCode === p.code ? '1px solid rgba(212, 166, 79, 0.4)' : '1px solid transparent',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: activeUser.userCode === p.code ? '700' : '500',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: p.color }}></span>
+                  <span style={{ flex: 1 }}>{p.name}</span>
+                  {activeUser.userCode === p.code && <span style={{ color: '#D4A64F', fontWeight: '800' }}>✓</span>}
+                </button>
+              ))}
             </div>
           )}
         </div>
