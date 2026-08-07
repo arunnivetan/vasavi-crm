@@ -4,7 +4,6 @@ import Dashboard from './pages/Dashboard';
 import Pipeline from './pages/Pipeline';
 import Reminders from './pages/Reminders';
 import CustomerDetail from './pages/CustomerDetail';
-import LoginModal from './components/LoginModal';
 import AdminActivityMonitor from './pages/AdminActivityMonitor';
 
 function AppContent() {

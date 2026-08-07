@@ -230,32 +230,6 @@ const mapBillFromSupabase = (b) => ({
   createdAt: b.created_at
 });
 
-const mapCRMUserToSupabase = (u) => ({
-  id: ensureUUID(u.id),
-  user_code: u.userCode || '',
-  full_name: u.fullName || '',
-  role: u.role || 'Staff',
-  temp_password: u.tempPassword || 'suresh',
-  activity_color: u.activityColor || '#D4A64F',
-  created_at: parseSafeDate(u.createdAt, new Date().toISOString()),
-  updated_at: parseSafeDate(u.updatedAt, new Date().toISOString()),
-  last_login: u.lastLogin ? parseSafeDate(u.lastLogin) : null,
-  is_active: u.isActive !== undefined ? u.isActive : true
-});
-
-const mapCRMUserFromSupabase = (u) => ({
-  id: u.id,
-  userCode: u.user_code,
-  fullName: u.full_name,
-  role: u.role,
-  tempPassword: u.temp_password,
-  activityColor: u.activity_color,
-  createdAt: u.created_at,
-  updatedAt: u.updated_at,
-  lastLogin: u.last_login,
-  isActive: u.is_active
-});
-
 const mapCRMUserActivityToSupabase = (a) => ({
   id: ensureUUID(a.id),
   user_id: ensureUUID(a.userId),
@@ -804,57 +778,7 @@ export const databaseService = {
     }
   },
 
-  // --- CRM USER ACCOUNT & AUDIT TIMELINE ---
-  async fetchCRMUsers() {
-    try {
-      console.log('[Database Service] Fetching CRM staff users...');
-      const { data, error } = await supabase
-        .from('crm_users')
-        .select('*')
-        .order('full_name', { ascending: true });
-      if (error) {
-        console.error('[Database Service] fetchCRMUsers error:', error);
-        throw error;
-      }
-      return (data || []).map(mapCRMUserFromSupabase);
-    } catch (err) {
-      console.error('[Database Service] fetchCRMUsers exception:', err.message || err);
-      return [];
-    }
-  },
-
-  async createCRMUser(user) {
-    try {
-      console.log('[Database Service] Registering new CRM user profile:', user?.fullName);
-      const dbObj = mapCRMUserToSupabase(user);
-      const { data, error } = await supabase
-        .from('crm_users')
-        .insert([dbObj])
-        .select();
-      if (error) {
-        console.error('[Database Service] createCRMUser error:', error);
-        throw error;
-      }
-      return data && data.length > 0 ? mapCRMUserFromSupabase(data[0]) : null;
-    } catch (err) {
-      console.error('[Database Service] createCRMUser exception:', err.message || err);
-      throw err;
-    }
-  },
-
-  async updateCRMUserLastLogin(userId) {
-    try {
-      const { error } = await supabase
-        .from('crm_users')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', userId);
-      if (error) throw error;
-      return true;
-    } catch (err) {
-      console.error('[Database Service] updateCRMUserLastLogin error:', err.message || err);
-      return false;
-    }
-  },
+  // --- CRM AUDIT TIMELINE ---
 
   async fetchCRMUserActivities() {
     try {

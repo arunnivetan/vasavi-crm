@@ -33,8 +33,7 @@ export const CRMDatabaseProvider = ({ children }) => {
     isActive: true
   };
 
-  // CRM Users & Activities audit logs state
-  const [crmUsers, setCRMUsers] = useState([]);
+  // CRM Activities audit logs state
   const [crmUserActivities, setCRMUserActivities] = useState([]);
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('svp_crm_active_user');
@@ -88,7 +87,7 @@ export const CRMDatabaseProvider = ({ children }) => {
     setIsLoading(true);
     try {
       console.log('[CRM Context] Initializing Supabase database synchronization...');
-      const [custs, acts, nts, pmts, rems, stgs, bls, users, userActs] = await Promise.all([
+      const [custs, acts, nts, pmts, rems, stgs, bls, userActs] = await Promise.all([
         databaseService.getCustomers(),
         databaseService.fetchActivities(),
         databaseService.fetchNotes(),
@@ -96,7 +95,6 @@ export const CRMDatabaseProvider = ({ children }) => {
         databaseService.fetchReminders(),
         databaseService.fetchStages(),
         databaseService.fetchBills(),
-        databaseService.fetchCRMUsers(),
         databaseService.fetchCRMUserActivities()
       ]);
       
@@ -765,97 +763,6 @@ export const CRMDatabaseProvider = ({ children }) => {
   };
 
   // --- CRM INTERNAL LOGIN PERSISTENCE HANDLERS ---
-  const loginUser = async (userCode, password) => {
-    try {
-      setIsLoading(true);
-      let freshUsers = [];
-      try {
-        freshUsers = await databaseService.fetchCRMUsers();
-        setCRMUsers(freshUsers || []);
-      } catch (e) {
-        console.warn('[CRM Context] Failed to fetch CRM users:', e);
-      }
-
-      let matched = freshUsers ? freshUsers.find(u => u.userCode === userCode.toLowerCase()) : null;
-
-      if (!matched) {
-        // Auto-create / seed predefined profile if it's one of the default profiles
-        const predefinedMap = {
-          'suresh': { name: 'R SURESH BABU', color: '#D4A64F', role: 'Admin' },
-          'arun': { name: 'R S ARUN NIVETAN', color: '#3B82F6', role: 'Admin' },
-          'saranya': { name: 'S SARANYA', color: '#A855F7', role: 'Staff' },
-          'pratiksha': { name: 'R S PRATIKSHA', color: '#10B981', role: 'Staff' }
-        };
-
-        const defaultProfile = predefinedMap[userCode.toLowerCase()];
-        if (defaultProfile) {
-          const newUser = {
-            id: crypto.randomUUID(),
-            userCode: userCode.toLowerCase(),
-            fullName: defaultProfile.name,
-            role: defaultProfile.role,
-            tempPassword: 'suresh',
-            activityColor: defaultProfile.color,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            isActive: true
-          };
-          try {
-            matched = await databaseService.createCRMUser(newUser);
-          } catch (createErr) {
-            console.warn('[CRM Context] Failed to save CRM user to database, using local profile object:', createErr);
-          }
-          if (!matched) {
-            matched = newUser;
-          }
-        }
-      }
-
-      if (!matched) {
-        throw new Error('User profile not found in database.');
-      }
-
-      if (password !== 'suresh') {
-        throw new Error('Incorrect password entered.');
-      }
-
-      try {
-        await databaseService.updateCRMUserLastLogin(matched.id);
-      } catch (e) {}
-
-      localStorage.setItem('svp_crm_active_user', JSON.stringify(matched));
-      setCurrentUser(matched);
-      setActiveStaff(matched.fullName);
-
-      // Log activity
-      try {
-        const meta = getDeviceMetadata();
-        const newAct = {
-          id: crypto.randomUUID(),
-          userId: matched.id,
-          customerId: null,
-          activityType: 'Login',
-          activityDescription: `Staff ${matched.fullName} logged into CRM successfully.`,
-          moduleName: 'Authentication',
-          oldValue: null,
-          newValue: 'Session Active',
-          ipAddress: meta.ipAddress,
-          deviceInfo: meta.deviceInfo,
-          createdAt: new Date().toISOString()
-        };
-        await databaseService.logCRMActivity(newAct);
-      } catch (e) {}
-
-      await refreshDatabase();
-      return matched;
-    } catch (err) {
-      console.error('[CRM Context] loginUser Exception:', err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const logoutUser = async () => {
     localStorage.removeItem('svp_crm_active_user');
     setCurrentUser(DEFAULT_USER);
@@ -877,75 +784,6 @@ export const CRMDatabaseProvider = ({ children }) => {
     localStorage.setItem('svp_crm_active_user', JSON.stringify(newUser));
     setCurrentUser(newUser);
     setActiveStaff(newUser.fullName);
-  };
-
-  const registerOthersUser = async (fullName) => {
-    try {
-      setIsLoading(true);
-      const colors = ['#EC4899', '#F43F5E', '#D946EF', '#8B5CF6', '#06B6D4', '#14B8A6', '#0EA5E9', '#E11D48', '#D97706', '#22C55E'];
-      const randomColor = colors[Math.floor(Math.random() * colors.length)];
-      const code = fullName.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-
-      const newUser = {
-        id: crypto.randomUUID(),
-        userCode: code || 'other_' + Date.now(),
-        fullName: fullName.trim(),
-        role: 'Staff',
-        tempPassword: 'suresh',
-        activityColor: randomColor,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isActive: true
-      };
-
-      const created = await databaseService.createCRMUser(newUser);
-      if (created) {
-        await databaseService.updateCRMUserLastLogin(created.id);
-        localStorage.setItem('svp_crm_active_user', JSON.stringify(created));
-        setCurrentUser(created);
-        setActiveStaff(created.fullName);
-
-        // Audit Logs
-        const meta = getDeviceMetadata();
-        const regAct = {
-          id: crypto.randomUUID(),
-          userId: created.id,
-          customerId: null,
-          activityType: 'Register User',
-          activityDescription: `New user profile registered permanently: ${created.fullName}`,
-          moduleName: 'User Management',
-          oldValue: null,
-          newValue: created.userCode,
-          ipAddress: meta.ipAddress,
-          deviceInfo: meta.deviceInfo,
-          createdAt: new Date().toISOString()
-        };
-        await databaseService.logCRMActivity(regAct);
-
-        const logAct = {
-          id: crypto.randomUUID(),
-          userId: created.id,
-          customerId: null,
-          activityType: 'Login',
-          activityDescription: `Staff ${created.fullName} logged into CRM successfully.`,
-          moduleName: 'Authentication',
-          oldValue: null,
-          newValue: 'Session Active',
-          ipAddress: meta.ipAddress,
-          deviceInfo: meta.deviceInfo,
-          createdAt: new Date().toISOString()
-        };
-        await databaseService.logCRMActivity(logAct);
-
-        await refreshDatabase();
-        return created;
-      }
-    } catch (err) {
-      console.error('[CRM Context] registerOthersUser Exception:', err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   // 8. Pipeline Stage Configurations
@@ -1164,13 +1002,10 @@ export const CRMDatabaseProvider = ({ children }) => {
       isLoading,
       activeStaff,
       setActiveStaff,
-      crmUsers,
       crmUserActivities,
       currentUser,
       switchUser,
-      loginUser,
       logoutUser,
-      registerOthersUser,
       logAuditActivity,
       addCustomer,
       editCustomer,
